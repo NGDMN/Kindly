@@ -22,3 +22,46 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+build/
+.npm
+.yarn-integrity
+package-lock.json
+yarn.lock
+
+# ===== Env files =====
+.env
+*.env
+!.env.example
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# ===== Logs =====
+*.log
+logs/
