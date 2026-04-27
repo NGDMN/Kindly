@@ -15,9 +15,9 @@ Plataforma de voluntariado gamificada
 
 | Nome | Área |
 |---|---|
-| Neil Goodman | Java Domínio + Persistência + Oracle |
 | Daniele Vargas de Lima | Backend Python |
 | Miguel Aguiar Fernandes | Java API + Integração |
 | Naiara Silva e Silva | Frontend Portal Voluntário |
+| Neil Goodman | Java Domínio + Persistência + Oracle |
 | Victor Perazzi de Melo | Frontend Portal ONG |
 
