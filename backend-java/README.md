@@ -17,8 +17,15 @@ Spring Boot. Domínio transacional, API REST, integração com Python e Oracle.
 
 ## Como rodar
 
-_A ser preenchido_
+**Pré-requisitos:**
+- JDK 17+
+- Maven instalado e no PATH
+- Arquivo `.env` na raiz do `backend-java/` baseado no `.env.example` da raiz do projeto
 
+**Executar:**
+```
+mvn spring-boot:run
+```
 ## Estrutura prevista
 
 ```
