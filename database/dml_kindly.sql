@@ -1,5 +1,5 @@
 
-INSERT INTO TB_Role (id, nome) VALUES (1, 'Responsável');
+INSERT INTO TB_Role (id, nome) VALUES (1, 'Responsavel');
 INSERT INTO TB_Role (id, nome) VALUES (2, 'Administrador');
 
 INSERT INTO TB_Status (id, nome) VALUES (1, 'Ativo');
