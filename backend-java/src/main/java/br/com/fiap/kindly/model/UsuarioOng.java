@@ -6,15 +6,17 @@ public class UsuarioOng {
     private Long idUsuario;
     private Long idOng;
     private Role role;
+    private Status status;
 
     public UsuarioOng() {
     }
 
-    public UsuarioOng(Long id, Long idUsuario, Long idOng, Role role) {
+    public UsuarioOng(Long id, Long idUsuario, Long idOng, Role role, Status status) {
         this.id = id;
         this.idUsuario = idUsuario;
         this.idOng = idOng;
         this.role = role;
+        this.status = status;
     }
 
     public Long getId() {
@@ -47,5 +49,13 @@ public class UsuarioOng {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
     }
 }

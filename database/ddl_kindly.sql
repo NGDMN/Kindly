@@ -103,9 +103,11 @@ CREATE TABLE TB_Usuario_ONG(
     id_usuario NUMBER NOT NULL,
     id_ong NUMBER NOT NULL,
     id_role NUMBER NOT NULL,
+    id_status NUMBER DEFAULT 1 NOT NULL,
     CONSTRAINT fk_Usuario_ONG_Usuario FOREIGN KEY (id_usuario) REFERENCES TB_Usuario(id),
     CONSTRAINT fk_Usuario_ONG_ONG FOREIGN KEY (id_ong) REFERENCES TB_ONG(id),
-    CONSTRAINT fk_Usuario_ONG_Role FOREIGN KEY (id_role) REFERENCES TB_Role(id)    
+    CONSTRAINT fk_Usuario_ONG_Role FOREIGN KEY (id_role) REFERENCES TB_Role(id),
+    CONSTRAINT fk_Usuario_ONG_Status FOREIGN KEY (id_status) REFERENCES TB_Status(id)    
 );
 
 CREATE TABLE TB_Oportunidade(
