@@ -71,4 +71,9 @@ public class Usuario extends EntidadeBase {
     public void setStatus(Status status) {
         this.status = status;
     }
+
+    @Override
+    public String toString() {
+        return "Usuario [cpf=" + cpf + ", usuario=" + usuario + ", senha=" + senha + ", motor=" + motor + ", pontuacaoAcumulada=" + pontuacaoAcumulada + ", status=" + status + "]";
+    }
 }

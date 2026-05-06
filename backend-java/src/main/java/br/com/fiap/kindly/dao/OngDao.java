@@ -3,6 +3,7 @@ package br.com.fiap.kindly.dao;
 import java.util.List;
 import java.util.Optional;
 
+import br.com.fiap.kindly.model.Usuario;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -50,6 +51,16 @@ public class OngDao {
     public Optional<ONG> buscarPorId(Long id) {
         String sql = "SELECT * FROM TB_ONG WHERE id = ?";
         return jdbc.query(sql, mapper, id).stream().findFirst();
+    }
+
+    public Optional<ONG> buscarPorRazaoSocial(String razaoSocial) {
+        String sql = "SELECT * FROM TB_ONG WHERE razao_social = ?";
+        return jdbc.query(sql, mapper, razaoSocial).stream().findFirst();
+    }
+
+    public Optional<ONG> buscarPorCnpj(String cnpj) {
+        String sql = "SELECT * FROM TB_ONG WHERE cnpj = ?";
+        return jdbc.query(sql, mapper, cnpj).stream().findFirst();
     }
 
     public void atualizar(ONG o) {

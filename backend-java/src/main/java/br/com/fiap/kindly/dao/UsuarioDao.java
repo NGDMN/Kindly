@@ -64,6 +64,11 @@ public class UsuarioDao {
         return jdbc.query(sql, mapper, usuario).stream().findFirst();
     }
 
+    public Optional<Usuario> buscarPorCpf(String cpf) {
+        String sql = "SELECT * FROM TB_Usuario WHERE cpf = ?";
+        return jdbc.query(sql, mapper, cpf).stream().findFirst();
+    }
+
     public void atualizar(Usuario u) {
         String sql = """
                 UPDATE TB_Usuario
