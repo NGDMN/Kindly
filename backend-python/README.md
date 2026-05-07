@@ -21,4 +21,5 @@ Daniele Vargas de Lima
 
 ## Como rodar
 
-_A ser preenchido_
+pip install -r requirements.txt
+python app.py
