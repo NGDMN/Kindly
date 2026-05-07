@@ -1,16 +1,5 @@
 package br.com.fiap.kindly.dao;
 
-// DDL Oracle necessario para esta funcionalidade:
-//
-// CREATE TABLE TB_RefreshToken (
-//     id         NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-//     token      VARCHAR2(512)  NOT NULL,
-//     id_usuario NUMBER         NOT NULL,
-//     expiracao  TIMESTAMP      NOT NULL,
-//     CONSTRAINT uq_refreshtoken_token   UNIQUE (token),
-//     CONSTRAINT fk_refreshtoken_usuario FOREIGN KEY (id_usuario) REFERENCES TB_Usuario(id)
-// );
-
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;

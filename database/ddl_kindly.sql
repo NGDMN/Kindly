@@ -1,3 +1,9 @@
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE TB_RefreshToken';
+    EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
 BEGIN
     EXECUTE IMMEDIATE 'DROP TABLE TB_Streak';
     EXCEPTION WHEN OTHERS THEN NULL;
@@ -48,6 +54,8 @@ BEGIN
     EXECUTE IMMEDIATE 'DROP TABLE TB_Role';
     EXCEPTION WHEN OTHERS THEN NULL;
 END;
+
+
 
 
 
@@ -150,9 +158,19 @@ CREATE TABLE TB_Streak(
     CONSTRAINT chk_streak CHECK (streak_mantida in ('T', 'F')) -- 'T' True | 'F' False  
 );
 
+CREATE TABLE TB_RefreshToken (
+     id         NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+     token      VARCHAR2(512)  NOT NULL,
+     id_usuario NUMBER         NOT NULL,
+     expiracao  TIMESTAMP      NOT NULL,
+    CONSTRAINT uq_RefreshToken_token   UNIQUE (token),
+    CONSTRAINT fk_RefreshToken_Usuario FOREIGN KEY (id_usuario) REFERENCES TB_Usuario(id)
+ );
+
 
 CREATE INDEX idx_Oportunidade_ONG ON TB_Oportunidade(id_ong);
 CREATE INDEX idx_Inscricao_Usuario ON TB_Inscricao(id_usuario);
 CREATE INDEX idx_Inscricao_Oportunidade ON TB_Inscricao(id_oportunidade);
 CREATE INDEX idx_Streak_Usuario ON TB_Streak(id_usuario);
 CREATE INDEX idx_Usuario_ONG_Usuario ON TB_Usuario_ONG(id_usuario);
+CREATE INDEX idx_RefreshToken_Usuario ON TB_RefreshToken(id_usuario);

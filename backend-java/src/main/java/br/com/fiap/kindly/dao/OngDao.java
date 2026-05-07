@@ -3,7 +3,6 @@ package br.com.fiap.kindly.dao;
 import java.util.List;
 import java.util.Optional;
 
-import br.com.fiap.kindly.model.Usuario;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
