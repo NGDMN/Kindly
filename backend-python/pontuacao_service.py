@@ -18,7 +18,7 @@ def calcular_pontuacao(payload):
 
     for campo in campos:
         if campo not in payload:
-            raise Exception(
+            raise KeyError(
                 f"Campo {campo} ausente.")
 
     id_oportunidade = payload["idOportunidade"]
