@@ -29,6 +29,10 @@ public class UsuarioService {
             throw new IllegalArgumentException("Nome de usuário já está em uso.");
         }
 
+        if (usuarioDao.buscarPorCpf(cpf).isPresent()) {
+            throw new IllegalArgumentException("CPF já cadastrado.");
+        }
+
         Usuario novoUsuario = new Usuario(
                 null,
                 nome,
