@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Kindly - Plataforma de voluntariado gamificada",
-  "author": "Seu Nome",
+  "author": "Naiara Silva e Silva e Victor Perazzi de Melo",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
