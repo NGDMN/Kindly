@@ -39,6 +39,6 @@ const Toast = ({ message, type = 'success', duration = 3000, onClose }) => {
       {message}
     </div>
   );
-
-  export default Toast;
 };
+  export default Toast;
+
