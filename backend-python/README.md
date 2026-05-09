@@ -20,5 +20,7 @@ Daniele Vargas de Lima
 - Stateless: não acessa banco, não persiste
 
 ## Como rodar
-
-_A ser preenchido_
+python -m venv venv
+venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+python app.py
