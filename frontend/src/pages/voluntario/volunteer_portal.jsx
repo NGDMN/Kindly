@@ -367,7 +367,7 @@ const LoginScreen = ({ onLogin, onRegister }) => {
           <div style={{ width: 64, height: 64, borderRadius: 18, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 32px rgba(0,200,150,.35)` }}>
             <span style={{ fontSize: 28 }}>🌱</span>
           </div>
-          <h1 className="syne" style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.02em" }}>VoluntarizeSP</h1>
+          <h1 className="syne" style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.02em" }}>Kindly</h1>
           <p style={{ color: G.slate, fontSize: 14, marginTop: 6 }}>Transforme seu tempo em impacto real</p>
         </div>
 
@@ -905,7 +905,7 @@ export default function App() {
             {/* Top nav */}
             <div className="nav">
               <span style={{ fontSize: 20 }}>🌱</span>
-              <span className="syne" style={{ fontWeight: 800, fontSize: 16, marginLeft: 8, flex: 1 }}>VoluntarizeSP</span>
+              <span className="syne" style={{ fontWeight: 800, fontSize: 16, marginLeft: 8, flex: 1 }}>Kindly</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,200,150,.08)", padding: "5px 12px", borderRadius: 20, border: `1px solid rgba(0,200,150,.15)` }}>
                 <span className="flame" style={{ fontSize: 14 }}>🔥</span>
                 <span className="syne" style={{ fontSize: 13, fontWeight: 700, color: G.emerald }}>{user.streak}</span>
