@@ -5,7 +5,7 @@ Plataforma de voluntariado gamificada
 
 ## Stack
 
-- **Frontend:** React + Bootstrap
+- **Frontend:** React
 - **Backend principal:** Java + Spring Boot
 - **Módulo de pontuação:** Python + Flask + Pandas
 - **Banco de dados:** Oracle SQL (FIAP)
