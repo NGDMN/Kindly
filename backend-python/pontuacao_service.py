@@ -9,6 +9,8 @@ def calcular_pontuacao(payload):
 
     campos = [
         "idOportunidade",
+        "vagasTotal",
+        "vagasPresente",
         "quantidadeInscritosRecentesCategoria",
         "quantidadeOportunidadesRecentesCategoria"
     ]
@@ -21,11 +23,13 @@ def calcular_pontuacao(payload):
     id_oportunidade = payload["idOportunidade"]
     inscritos_categoria = payload["quantidadeInscritosRecentesCategoria"]
     oportunidades_categoria = payload["quantidadeOportunidadesRecentesCategoria"]
+    vagas_total = payload["vagasTotal"]
+    vagas_presente = payload["vagasPresente"]
 
 #time, aqui utilizamos as funções criadas no arquivo de regras  para implementar de fato o cálculo das regras de pontuação aplicadas
 
-    modificador_oferta_demanda = (calcular_modificador_oferta_demanda(inscritos_categoria,oportunidades_categoria))
-    modificador_estagnacao = (calcular_modificador_estagnacao(inscritos_categoria,oportunidades_categoria))
+    modificador_oferta_demanda = calcular_modificador_oferta_demanda(vagas_total, vagas_presente)
+    modificador_estagnacao = calcular_modificador_estagnacao(inscritos_categoria, oportunidades_categoria)
     modificador_total = (modificador_oferta_demanda *modificador_estagnacao)
     pontuacao = pontuacao_base * modificador_total
 

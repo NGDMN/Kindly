@@ -119,10 +119,12 @@ public class InscricaoService {
                 .listarPorCategoria(oportunidade.getIdCategoria()).size();
 
         Map<String, Object> payload = Map.of(
-                "idOportunidade", idOportunidade,
-                "quantidadeInscritosRecentesCategoria", inscritosCategoria,
-                "quantidadeOportunidadesRecentesCategoria", oportunidadesCategoria
-        );
+        "idOportunidade", idOportunidade,
+        "vagasTotal", oportunidade.getVagasTotal(),
+        "vagasPresente", oportunidade.getVagasPresente(),
+        "quantidadeInscritosRecentesCategoria", inscritosCategoria,
+        "quantidadeOportunidadesRecentesCategoria", oportunidadesCategoria
+    );
 
         Map resposta = restTemplate.postForObject(
                 pythonServiceUrl + "/calcular-pontuacao",
