@@ -54,16 +54,16 @@ api.interceptors.response.use(
 // ───────────────────────────────────────────────────────────────────────────────
 
 /**
- * Registrar nova ONG
- * @param {Object} data - Dados da ONG
- * @param {string} data.nome - Nome da ONG
- * @param {string} data.cpf - CPF do responsável
+ * Registrar novo usuário (ONG ou Voluntário)
+ * @param {Object} data - Dados do usuário
+ * @param {string} data.nome - Nome
+ * @param {string} data.cpf - CPF
  * @param {string} data.usuario - Usuário (username)
  * @param {string} data.senha - Senha
  * @param {string} data.motor - Motor de banco de dados (C, K ou A)
  * @returns {Promise<Object>} { accessToken, refreshToken, tokenType }
  */
-export const registerOng = async (data) => {
+export const register = async (data) => {
   try {
     const response = await api.post('/auth/register', {
       nome: data.nome,
@@ -87,12 +87,12 @@ export const registerOng = async (data) => {
 };
 
 /**
- * Login da ONG
+ * Login de usuário (ONG ou Voluntário)
  * @param {string} usuario - Usuário (username)
  * @param {string} senha - Senha
  * @returns {Promise<Object>} { accessToken, refreshToken, tokenType }
  */
-export const loginOng = async (usuario, senha) => {
+export const login = async (usuario, senha) => {
   try {
     const response = await api.post('/auth/login', {
       usuario,
@@ -142,10 +142,10 @@ export const refreshToken = async () => {
 };
 
 /**
- * Logout da ONG
+ * Logout do usuário (ONG ou Voluntário)
  * @returns {Promise<void>}
  */
-export const logoutOng = async () => {
+export const logout = async () => {
   try {
     const refreshTokenValue = localStorage.getItem('refreshToken');
 
