@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { login, registrar, logout } from "../../services/api";
 
 // ── Palette & global styles ──────────────────────────────────────────────────
 const G = {
@@ -34,7 +35,6 @@ const css = `
 
   .syne { font-family: 'Syne', sans-serif; }
 
-  /* ── Noise overlay ── */
   .noise::before {
     content: '';
     position: fixed; inset: 0;
@@ -42,13 +42,11 @@ const css = `
     pointer-events: none; z-index: 9999;
   }
 
-  /* ── Glow blobs ── */
   .blob {
     position: fixed; border-radius: 50%;
     filter: blur(80px); opacity: 0.15; pointer-events: none; z-index: 0;
   }
 
-  /* ── Card ── */
   .card {
     background: ${G.navyMid};
     border: 1px solid rgba(0,200,150,.12);
@@ -57,7 +55,6 @@ const css = `
   }
   .card:hover { border-color: rgba(0,200,150,.35); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,200,150,.08); }
 
-  /* ── Buttons ── */
   .btn-primary {
     background: ${G.emerald};
     color: ${G.navy};
@@ -72,6 +69,7 @@ const css = `
   }
   .btn-primary:hover { background: ${G.emeraldDark}; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,200,150,.3); }
   .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
   .btn-ghost {
     background: transparent;
@@ -99,7 +97,6 @@ const css = `
   }
   .btn-danger:hover { background: #e04444; transform: translateY(-1px); }
 
-  /* ── Input ── */
   .input {
     background: rgba(255,255,255,.04);
     border: 1.5px solid rgba(255,255,255,.1);
@@ -116,7 +113,6 @@ const css = `
   .input::placeholder { color: ${G.slate}; }
   .input option { background: ${G.navyMid}; }
 
-  /* ── Label ── */
   .label {
     font-size: 12px;
     font-weight: 500;
@@ -127,7 +123,6 @@ const css = `
     display: block;
   }
 
-  /* ── Badge ── */
   .badge {
     font-size: 11px;
     font-weight: 600;
@@ -139,7 +134,6 @@ const css = `
   .badge-amber { background: rgba(255,181,71,.15); color: ${G.amber}; }
   .badge-purple { background: rgba(123,97,255,.15); color: ${G.purple}; }
 
-  /* ── Nav ── */
   .nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     background: rgba(13,31,45,.85);
@@ -149,7 +143,6 @@ const css = `
     display: flex; align-items: center; padding: 0 24px;
   }
 
-  /* ── Bottom nav ── */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
     background: rgba(13,31,45,.9);
@@ -171,7 +164,6 @@ const css = `
   .bottom-nav-btn.active { color: ${G.emerald}; }
   .bottom-nav-btn:hover { background: rgba(0,200,150,.06); }
 
-  /* ── Progress bar ── */
   .progress-bar {
     height: 6px; border-radius: 3px;
     background: rgba(255,255,255,.08);
@@ -183,14 +175,12 @@ const css = `
     transition: width .6s ease;
   }
 
-  /* ── Streak flame ── */
   @keyframes flicker {
     0%,100% { transform: scaleY(1) rotate(-2deg); }
     50% { transform: scaleY(1.08) rotate(2deg); }
   }
   .flame { display: inline-block; animation: flicker 1.2s ease-in-out infinite; }
 
-  /* ── QR scanner ── */
   .qr-frame {
     width: 220px; height: 220px;
     border: 3px solid ${G.emerald};
@@ -214,7 +204,6 @@ const css = `
     animation: scan 2s linear infinite;
   }
 
-  /* ── Donation ── */
   .donation-card {
     background: linear-gradient(135deg, rgba(0,200,150,.12), rgba(123,97,255,.08));
     border: 1px solid rgba(0,200,150,.2);
@@ -222,7 +211,6 @@ const css = `
     padding: 24px;
   }
 
-  /* ── Animations ── */
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -234,7 +222,6 @@ const css = `
   .fade-up  { animation: fadeUp .45s ease both; }
   .fade-in  { animation: fadeIn .4s ease both; }
 
-  /* ── Modal overlay ── */
   .modal-bg {
     position: fixed; inset: 0; z-index: 200;
     background: rgba(13,31,45,.75);
@@ -252,10 +239,8 @@ const css = `
     animation: fadeUp .3s ease;
   }
 
-  /* ── Checkbox ── */
   input[type=checkbox] { accent-color: ${G.emerald}; width: 16px; height: 16px; cursor: pointer; }
 
-  /* ── Radio ── */
   .radio-card {
     border: 1.5px solid rgba(255,255,255,.1);
     border-radius: 12px; padding: 14px 16px;
@@ -265,7 +250,6 @@ const css = `
   .radio-card.selected { border-color: ${G.emerald}; background: rgba(0,200,150,.06); }
   .radio-card:hover { border-color: rgba(0,200,150,.4); }
 
-  /* ── Toast ── */
   @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
   .toast {
     position: fixed; bottom: 80px; right: 20px; z-index: 500;
@@ -280,12 +264,11 @@ const css = `
     max-width: 300px;
   }
 
-  /* ── Scrollable content ── */
   .page { padding: 80px 20px 90px; max-width: 480px; margin: 0 auto; }
   .page-full { padding: 80px 20px 90px; max-width: 600px; margin: 0 auto; }
 `;
 
-// ── Icons (inline SVG) ────────────────────────────────────────────────────────
+// ── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ name, size = 20, color = "currentColor" }) => {
   const paths = {
     home: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10",
@@ -325,7 +308,7 @@ const Toast = ({ msg, icon = "✅", onDone }) => {
   return <div className="toast"><span>{icon}</span><span>{msg}</span></div>;
 };
 
-// ── Blob background ───────────────────────────────────────────────────────────
+// ── Blobs ─────────────────────────────────────────────────────────────────────
 const Blobs = () => (
   <>
     <div className="blob" style={{ width: 400, height: 400, background: G.emerald, top: -100, right: -100 }} />
@@ -333,9 +316,7 @@ const Blobs = () => (
   </>
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DATA
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Data ──────────────────────────────────────────────────────────────────────
 const OPPORTUNITIES = [
   { id: 1, title: "Tutoria em Matemática", org: "Instituto Futuro", category: "Educação", date: "10 Mai", time: "14h–16h", location: "São Paulo, SP", hours: 2, spots: 5, badge: "green", desc: "Ajude estudantes do ensino médio a superarem dificuldades em matemática. Experiência prévia em ensino é um diferencial.", skills: ["Paciência", "Matemática", "Comunicação"] },
   { id: 2, title: "Distribuição de Refeições", org: "Mão Amiga ONG", category: "Social", date: "12 Mai", time: "08h–12h", location: "Centro, SP", hours: 4, spots: 12, badge: "amber", desc: "Participe da distribuição de marmitas para pessoas em situação de rua. Importante e urgente!", skills: ["Trabalho em equipe", "Empatia"] },
@@ -350,19 +331,37 @@ const ENGINES = [
   { id: "purpose", icon: "✨", title: "Propósito Pessoal", desc: "Sentir que faço parte de algo maior" },
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SCREENS
-// ═══════════════════════════════════════════════════════════════════════════════
+// Motor escolhido no onboarding → código CHAR(1) esperado pelo backend
+const MOTOR_CODIGO = { impact: "C", skills: "A", community: "K", purpose: "A" };
 
-// ── 1. Login / Home ───────────────────────────────────────────────────────────
+// ── 1. LoginScreen ────────────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin, onRegister }) => {
-  const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
+  const [usuario, setUsuario] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
+
+  const handleLogin = async () => {
+    if (!usuario.trim() || !senha.trim()) {
+      setErro("Preencha usuário e senha.");
+      return;
+    }
+    setCarregando(true);
+    setErro("");
+    try {
+      await login({ usuario, senha });
+      onLogin();
+    } catch {
+      setErro("Usuário ou senha inválidos.");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 24, position: "relative", overflow: "hidden" }}>
       <Blobs />
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 400 }} className="fade-up">
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ width: 64, height: 64, borderRadius: 18, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 32px rgba(0,200,150,.35)` }}>
             <span style={{ fontSize: 28 }}>🌱</span>
@@ -371,24 +370,47 @@ const LoginScreen = ({ onLogin, onRegister }) => {
           <p style={{ color: G.slate, fontSize: 14, marginTop: 6 }}>Transforme seu tempo em impacto real</p>
         </div>
 
-        {/* Form */}
         <div className="card" style={{ padding: 28 }}>
           <div style={{ marginBottom: 18 }}>
-            <label className="label">E-mail</label>
-            <input className="input" type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+            <label className="label">Usuário</label>
+            <input
+              className="input"
+              type="text"
+              placeholder="seu_usuario"
+              value={usuario}
+              onChange={e => setUsuario(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+            />
           </div>
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: erro ? 12 : 24 }}>
             <label className="label">Senha</label>
-            <input className="input" type="password" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} />
+            <input
+              className="input"
+              type="password"
+              placeholder="••••••••"
+              value={senha}
+              onChange={e => setSenha(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+            />
           </div>
-          <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={onLogin}>Entrar</button>
+
+          {erro && <p style={{ fontSize: 13, color: G.coral, marginBottom: 16 }}>{erro}</p>}
+
+          <button
+            className="btn-primary"
+            style={{ width: "100%", fontSize: 15 }}
+            onClick={handleLogin}
+            disabled={carregando}
+          >
+            {carregando ? "Entrando…" : "Entrar"}
+          </button>
+
           <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: G.slate }}>
             Ainda não tem conta?{" "}
             <span style={{ color: G.emerald, cursor: "pointer", fontWeight: 600 }} onClick={onRegister}>Cadastre-se</span>
           </div>
         </div>
 
-        {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 24 }}>
           {[["12.4k", "Voluntários"], ["580", "ONGs"], ["84k h", "Doadas"]].map(([n, l]) => (
             <div key={l} style={{ textAlign: "center" }}>
@@ -402,20 +424,49 @@ const LoginScreen = ({ onLogin, onRegister }) => {
   );
 };
 
-// ── 2. Cadastro (multi-step) ──────────────────────────────────────────────────
+// ── 2. RegisterScreen ─────────────────────────────────────────────────────────
 const RegisterScreen = ({ onBack, onDone }) => {
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", engine: "", pass: "" });
+  const [form, setForm] = useState({ nome: "", cpf: "", usuario: "", senha: "", senhaConfirm: "", motor: "" });
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  const handleDone = async () => {
+    if (form.senha !== form.senhaConfirm) {
+      setErro("As senhas não coincidem.");
+      return;
+    }
+    if (form.cpf.replace(/\D/g, "").length !== 11) {
+      setErro("CPF deve ter 11 dígitos.");
+      return;
+    }
+    setCarregando(true);
+    setErro("");
+    try {
+      await registrar({
+        nome: form.nome,
+        cpf: form.cpf.replace(/\D/g, ""),
+        usuario: form.usuario,
+        senha: form.senha,
+        motor: MOTOR_CODIGO[form.motor] ?? null,
+      });
+      onDone();
+    } catch (e) {
+      const msg = e?.response?.data;
+      setErro(typeof msg === "string" ? msg : "Erro ao criar conta. Verifique os dados.");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   const steps = [
-    // Step 0 — Motor de engajamento
     <div key="0" className="fade-up">
       <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>O que te move? 💡</h2>
       <p style={{ color: G.slate, fontSize: 14, marginBottom: 24 }}>Sua resposta nos ajuda a personalizar as melhores oportunidades para você.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {ENGINES.map(e => (
-          <div key={e.id} className={`radio-card ${form.engine === e.id ? "selected" : ""}`} onClick={() => upd("engine", e.id)}>
+          <div key={e.id} className={`radio-card ${form.motor === e.id ? "selected" : ""}`} onClick={() => upd("motor", e.id)}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>{e.icon}</span>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{e.title}</div>
@@ -426,11 +477,14 @@ const RegisterScreen = ({ onBack, onDone }) => {
       </div>
     </div>,
 
-    // Step 1 — Dados pessoais
     <div key="1" className="fade-up">
       <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Seus dados 📋</h2>
       <p style={{ color: G.slate, fontSize: 14, marginBottom: 24 }}>Preencha suas informações básicas.</p>
-      {[["name", "Nome completo", "text", "Maria Silva"], ["email", "E-mail", "email", "maria@email.com"], ["phone", "Telefone", "tel", "(11) 99999-9999"], ["city", "Cidade", "text", "São Paulo"]].map(([k, lbl, t, ph]) => (
+      {[
+        ["nome", "Nome completo", "text", "Maria Silva"],
+        ["cpf", "CPF (só números)", "text", "00000000000"],
+        ["usuario", "Nome de usuário", "text", "maria_silva"],
+      ].map(([k, lbl, t, ph]) => (
         <div key={k} style={{ marginBottom: 16 }}>
           <label className="label">{lbl}</label>
           <input className="input" type={t} placeholder={ph} value={form[k]} onChange={e => upd(k, e.target.value)} />
@@ -438,19 +492,19 @@ const RegisterScreen = ({ onBack, onDone }) => {
       ))}
     </div>,
 
-    // Step 2 — Senha
     <div key="2" className="fade-up">
       <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Crie sua senha 🔐</h2>
       <p style={{ color: G.slate, fontSize: 14, marginBottom: 24 }}>Use pelo menos 8 caracteres.</p>
       <div style={{ marginBottom: 16 }}>
         <label className="label">Senha</label>
-        <input className="input" type="password" placeholder="••••••••" value={form.pass} onChange={e => upd("pass", e.target.value)} />
+        <input className="input" type="password" placeholder="••••••••" value={form.senha} onChange={e => upd("senha", e.target.value)} />
       </div>
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 16 }}>
         <label className="label">Confirmar Senha</label>
-        <input className="input" type="password" placeholder="••••••••" />
+        <input className="input" type="password" placeholder="••••••••" value={form.senhaConfirm} onChange={e => upd("senhaConfirm", e.target.value)} />
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 16 }}>
+      {erro && <p style={{ fontSize: 13, color: G.coral, marginBottom: 12 }}>{erro}</p>}
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
         <input type="checkbox" id="terms" />
         <label htmlFor="terms" style={{ fontSize: 13, color: G.slate, lineHeight: 1.5 }}>
           Concordo com os <span style={{ color: G.emerald }}>Termos de Uso</span> e <span style={{ color: G.emerald }}>Política de Privacidade</span>
@@ -463,9 +517,8 @@ const RegisterScreen = ({ onBack, onDone }) => {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       <Blobs />
       <div style={{ position: "relative", zIndex: 1, maxWidth: 440, width: "100%", margin: "0 auto", padding: "80px 24px 40px" }}>
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: G.white, cursor: "pointer", padding: 4 }}>
+          <button onClick={step === 0 ? onBack : () => setStep(s => s - 1)} style={{ background: "none", border: "none", color: G.white, cursor: "pointer", padding: 4 }}>
             <Icon name="arrow" size={20} />
           </button>
           <div style={{ flex: 1 }}>
@@ -480,8 +533,13 @@ const RegisterScreen = ({ onBack, onDone }) => {
 
         <div style={{ display: "flex", gap: 12, marginTop: 28 }}>
           {step > 0 && <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setStep(s => s - 1)}>Voltar</button>}
-          <button className="btn-primary" style={{ flex: 2 }} onClick={() => step < 2 ? setStep(s => s + 1) : onDone()}>
-            {step < 2 ? "Continuar" : "Criar Conta"}
+          <button
+            className="btn-primary"
+            style={{ flex: 2 }}
+            onClick={() => step < 2 ? setStep(s => s + 1) : handleDone()}
+            disabled={carregando}
+          >
+            {step < 2 ? "Continuar" : carregando ? "Criando conta…" : "Criar Conta"}
           </button>
         </div>
       </div>
@@ -489,7 +547,7 @@ const RegisterScreen = ({ onBack, onDone }) => {
   );
 };
 
-// ── 3. Home (Oportunidades) ────────────────────────────────────────────────────
+// ── 3. HomeTab ────────────────────────────────────────────────────────────────
 const HomeTab = ({ user, onOpportunity }) => {
   const [filter, setFilter] = useState("Todos");
   const cats = ["Todos", "Educação", "Social", "Meio Ambiente", "Saúde"];
@@ -497,13 +555,11 @@ const HomeTab = ({ user, onOpportunity }) => {
 
   return (
     <div className="page-full">
-      {/* Greeting */}
       <div className="fade-up" style={{ marginBottom: 24 }}>
         <p style={{ color: G.slate, fontSize: 13 }}>Bem-vindo de volta 👋</p>
         <h2 className="syne" style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em" }}>{user.name}</h2>
       </div>
 
-      {/* Streak banner */}
       <div className="fade-up card" style={{ padding: "16px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16, animationDelay: ".05s" }}>
         <div style={{ fontSize: 36 }} className="flame">🔥</div>
         <div style={{ flex: 1 }}>
@@ -516,7 +572,6 @@ const HomeTab = ({ user, onOpportunity }) => {
         </div>
       </div>
 
-      {/* Category filter */}
       <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 20, paddingBottom: 4 }} className="fade-up">
         {cats.map(c => (
           <button key={c} onClick={() => setFilter(c)} style={{
@@ -529,7 +584,6 @@ const HomeTab = ({ user, onOpportunity }) => {
         ))}
       </div>
 
-      {/* Opportunity cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {filtered.map((op, i) => (
           <div key={op.id} className="card fade-up" style={{ padding: 20, cursor: "pointer", animationDelay: `${.08 * i}s` }} onClick={() => onOpportunity(op)}>
@@ -553,7 +607,7 @@ const HomeTab = ({ user, onOpportunity }) => {
   );
 };
 
-// ── 4. Oportunidade detail + inscrição ────────────────────────────────────────
+// ── 4. OpportunityModal ───────────────────────────────────────────────────────
 const OpportunityModal = ({ op, onClose, onConfirm }) => {
   const [enrolled, setEnrolled] = useState(false);
   const confirm = () => { setEnrolled(true); setTimeout(() => { onConfirm(op); onClose(); }, 1200); };
@@ -595,7 +649,7 @@ const OpportunityModal = ({ op, onClose, onConfirm }) => {
   );
 };
 
-// ── 5. Minha Conta + Streak ───────────────────────────────────────────────────
+// ── 5. AccountTab ─────────────────────────────────────────────────────────────
 const AccountTab = ({ user, onLogout }) => {
   const achievements = [
     { icon: "🌱", label: "Primeiro Passo", done: true },
@@ -605,7 +659,6 @@ const AccountTab = ({ user, onLogout }) => {
   ];
   return (
     <div className="page">
-      {/* Profile */}
       <div className="fade-up" style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{ width: 72, height: 72, borderRadius: "50%", background: `linear-gradient(135deg, ${G.emerald}, ${G.purple})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28 }}>
           {user.name[0]}
@@ -618,7 +671,6 @@ const AccountTab = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="card fade-up" style={{ padding: 20, marginBottom: 16, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0, animationDelay: ".05s" }}>
         {[[user.hours + "h", "Doadas"], [user.actions, "Ações"], [user.streak, "Streak"]].map(([v, l], i) => (
           <div key={l} style={{ textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
@@ -628,7 +680,6 @@ const AccountTab = ({ user, onLogout }) => {
         ))}
       </div>
 
-      {/* Streak visual */}
       <div className="card fade-up" style={{ padding: 20, marginBottom: 16, animationDelay: ".1s" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <span className="flame" style={{ fontSize: 20 }}>🔥</span>
@@ -644,7 +695,6 @@ const AccountTab = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Conquistas */}
       <div className="card fade-up" style={{ padding: 20, marginBottom: 16, animationDelay: ".15s" }}>
         <h3 className="syne" style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>🏅 Conquistas</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
@@ -657,7 +707,6 @@ const AccountTab = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Menu */}
       <div className="card fade-up" style={{ padding: 4, marginBottom: 16, animationDelay: ".2s" }}>
         {[["bell", "Notificações"], ["calendar", "Minhas Inscrições"], ["gift", "Programa de Pontos"]].map(([ic, lbl]) => (
           <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,.04)", cursor: "pointer" }}>
@@ -677,15 +726,12 @@ const AccountTab = ({ user, onLogout }) => {
   );
 };
 
-// ── 6. QR Scan + Geolocalização ───────────────────────────────────────────────
+// ── 6. QRTab ──────────────────────────────────────────────────────────────────
 const QRTab = ({ onScan }) => {
-  const [phase, setPhase] = useState("idle"); // idle | scanning | geo | done
+  const [phase, setPhase] = useState("idle");
   const [geo, setGeo] = useState(null);
 
-  const startScan = () => {
-    setPhase("scanning");
-    setTimeout(() => setPhase("geo"), 3000);
-  };
+  const startScan = () => { setPhase("scanning"); setTimeout(() => setPhase("geo"), 3000); };
   const captureGeo = () => {
     setPhase("loading");
     navigator.geolocation?.getCurrentPosition(
@@ -717,7 +763,7 @@ const QRTab = ({ onScan }) => {
           <div style={{ position: "relative", margin: "0 auto 32px" }}>
             <div className="qr-frame">
               <div className="scan-line" />
-              {[{ top: 0, left: 0, bt: "3px 0 0 3px" }, { top: 0, right: 0, bt: "3px 3px 0 0" }, { bottom: 0, left: 0, bt: "0 0 3px 3px" }, { bottom: 0, right: 0, bt: "0 3px 3px 0" }].map((s, i) => (
+              {[{ top: 0, left: 0 }, { top: 0, right: 0 }, { bottom: 0, left: 0 }, { bottom: 0, right: 0 }].map((s, i) => (
                 <div key={i} className="qr-corner" style={{ ...s, borderWidth: 3 }} />
               ))}
             </div>
@@ -775,7 +821,7 @@ const QRTab = ({ onScan }) => {
   );
 };
 
-// ── 7. Doação (mockada) ───────────────────────────────────────────────────────
+// ── 7. DonateTab ──────────────────────────────────────────────────────────────
 const DonateTab = () => {
   const [amount, setAmount] = useState(null);
   const [custom, setCustom] = useState("");
@@ -806,7 +852,6 @@ const DonateTab = () => {
         <p style={{ color: G.slate, fontSize: 14, marginTop: 6 }}>Apoie as organizações que você acredita</p>
       </div>
 
-      {/* Featured org */}
       <div className="donation-card fade-up" style={{ marginBottom: 24 }}>
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: `rgba(0,200,150,.15)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤝</div>
@@ -823,7 +868,6 @@ const DonateTab = () => {
         </div>
       </div>
 
-      {/* Amount */}
       <div className="fade-up" style={{ marginBottom: 20 }}>
         <label className="label">Valor</label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 10 }}>
@@ -833,15 +877,13 @@ const DonateTab = () => {
               color: amount === a ? G.navy : G.white,
               border: amount === a ? "none" : "1.5px solid rgba(255,255,255,.1)",
               borderRadius: 10, padding: "12px 0", cursor: "pointer",
-              fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14,
-              transition: "all .2s"
+              fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, transition: "all .2s"
             }}>R${a}</button>
           ))}
         </div>
         <input className="input" type="number" placeholder="Outro valor (R$)" value={custom} onChange={e => { setCustom(e.target.value); setAmount(null); }} />
       </div>
 
-      {/* Method */}
       <div className="fade-up" style={{ marginBottom: 28 }}>
         <label className="label">Forma de pagamento</label>
         <div style={{ display: "flex", gap: 8 }}>
@@ -851,8 +893,7 @@ const DonateTab = () => {
               color: method === m.id ? G.navy : G.white,
               border: method === m.id ? "none" : "1.5px solid rgba(255,255,255,.1)",
               borderRadius: 10, padding: "12px 0", cursor: "pointer",
-              fontFamily: "'Syne', sans-serif", fontWeight: 600, fontSize: 13,
-              transition: "all .2s"
+              fontFamily: "'Syne', sans-serif", fontWeight: 600, fontSize: 13, transition: "all .2s"
             }}>{m.icon}<br />{m.label}</button>
           ))}
         </div>
@@ -861,28 +902,32 @@ const DonateTab = () => {
       <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={() => (amount || custom) && method && setDone(true)}>
         Confirmar Doação {(amount || custom) ? `de R$${amount || custom}` : ""}
       </button>
-
       <p style={{ textAlign: "center", fontSize: 11, color: G.slate, marginTop: 16 }}>🔒 Pagamento mockado — nenhuma cobrança real será efetuada</p>
     </div>
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// APP SHELL
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── App Shell ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState("login"); // login | register | app
+  const [screen, setScreen] = useState("login");
   const [tab, setTab] = useState("home");
   const [selectedOp, setSelectedOp] = useState(null);
   const [toast, setToast] = useState(null);
-  const [user, setUser] = useState({ name: "Maria Silva", email: "maria@email.com", streak: 7, hours: 14, actions: 5, engine: "impact" });
+  const [user, setUser] = useState({ name: "Voluntário", email: "", streak: 0, hours: 0, actions: 0, engine: "impact" });
 
-  const showToast = (msg, icon) => { setToast({ msg, icon }); };
+  const showToast = (msg, icon) => setToast({ msg, icon });
 
-  const onLogin = () => { setScreen("app"); };
-  const onRegister = () => { setScreen("register"); };
+  const onLogin = () => setScreen("app");
+  const onRegister = () => setScreen("register");
   const onRegDone = () => { setScreen("app"); showToast("Conta criada com sucesso!", "🎉"); };
-  const onLogout = () => { setScreen("login"); setTab("home"); };
+
+  // logout chama o backend antes de limpar o estado local
+  const onLogout = async () => {
+    await logout();
+    setScreen("login");
+    setTab("home");
+  };
+
   const onEnroll = (op) => { setUser(u => ({ ...u, actions: u.actions + 1 })); showToast(`Inscrito em "${op.title}"!`, "✅"); };
   const onScan = () => { setUser(u => ({ ...u, streak: u.streak + 1, hours: u.hours + 2 })); showToast("Check-in registrado! +2h 🔥", "📍"); };
 
@@ -902,7 +947,6 @@ export default function App() {
 
         {screen === "app" && (
           <>
-            {/* Top nav */}
             <div className="nav">
               <span style={{ fontSize: 20 }}>🌱</span>
               <span className="syne" style={{ fontWeight: 800, fontSize: 16, marginLeft: 8, flex: 1 }}>Kindly</span>
@@ -912,13 +956,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* Content */}
             {tab === "home" && <HomeTab user={user} onOpportunity={setSelectedOp} />}
             {tab === "qr" && <QRTab onScan={onScan} />}
             {tab === "donate" && <DonateTab />}
             {tab === "account" && <AccountTab user={user} onLogout={onLogout} />}
 
-            {/* Bottom nav */}
             <div className="bottom-nav">
               {navItems.map(n => (
                 <button key={n.id} className={`bottom-nav-btn ${tab === n.id ? "active" : ""}`} onClick={() => setTab(n.id)}>
@@ -928,7 +970,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* Opportunity modal */}
             {selectedOp && <OpportunityModal op={selectedOp} onClose={() => setSelectedOp(null)} onConfirm={onEnroll} />}
           </>
         )}

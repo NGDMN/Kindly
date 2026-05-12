@@ -1,13 +1,9 @@
-import { useState, useEffect, useRef, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
+import { login, registrar, logout } from "../../services/api";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DESIGN SYSTEM — Kindly Portal da ONG
+// DESIGN SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════════
-// Paleta e CSS idênticos ao app do voluntário para consistência de marca.
-// Design: Portal Profissional com Gamificação Sutil
-// Fonte: Syne 800 para headings, DM Sans 300/400/500 para corpo
-// Layout: Top nav fixo + sidebar colapsável + conteúdo em grid responsivo
-
 const G = {
   emerald: "#00C896",
   emeraldDark: "#009E78",
@@ -24,309 +20,78 @@ const G = {
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: ${G.navy};
-    color: ${G.white};
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
+  body { font-family: 'DM Sans', sans-serif; background: ${G.navy}; color: ${G.white}; min-height: 100vh; overflow-x: hidden; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: ${G.navyMid}; }
   ::-webkit-scrollbar-thumb { background: ${G.emerald}; border-radius: 2px; }
-
   .syne { font-family: 'Syne', sans-serif; }
-
-  /* ── Noise overlay ── */
-  .noise::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 9999;
-  }
-
-  /* ── Glow blobs ── */
-  .blob {
-    position: fixed; border-radius: 50%;
-    filter: blur(80px); opacity: 0.15; pointer-events: none; z-index: 0;
-  }
-
-  /* ── Card ── */
-  .card {
-    background: ${G.navyMid};
-    border: 1px solid rgba(0,200,150,.12);
-    border-radius: 16px;
-    transition: border-color .2s, transform .2s, box-shadow .2s;
-  }
+  .noise::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E"); pointer-events: none; z-index: 9999; }
+  .blob { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.15; pointer-events: none; z-index: 0; }
+  .card { background: ${G.navyMid}; border: 1px solid rgba(0,200,150,.12); border-radius: 16px; transition: border-color .2s, transform .2s, box-shadow .2s; }
   .card:hover { border-color: rgba(0,200,150,.35); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,200,150,.08); }
   .card-static { background: ${G.navyMid}; border: 1px solid rgba(0,200,150,.12); border-radius: 16px; }
-
-  /* ── Buttons ── */
-  .btn-primary {
-    background: ${G.emerald};
-    color: ${G.navy};
-    border: none;
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    padding: 12px 28px;
-    cursor: pointer;
-    transition: background .2s, transform .15s, box-shadow .2s;
-    letter-spacing: .02em;
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  }
+  .btn-primary { background: ${G.emerald}; color: ${G.navy}; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 700; padding: 12px 28px; cursor: pointer; transition: background .2s, transform .15s, box-shadow .2s; letter-spacing: .02em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
   .btn-primary:hover { background: ${G.emeraldDark}; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,200,150,.3); }
   .btn-primary:active { transform: translateY(0); }
   .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-  .btn-ghost {
-    background: transparent;
-    color: ${G.emerald};
-    border: 1.5px solid ${G.emerald};
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    padding: 11px 24px;
-    cursor: pointer;
-    transition: background .2s, transform .15s;
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  }
+  .btn-ghost { background: transparent; color: ${G.emerald}; border: 1.5px solid ${G.emerald}; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 600; padding: 11px 24px; cursor: pointer; transition: background .2s, transform .15s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
   .btn-ghost:hover { background: rgba(0,200,150,.08); transform: translateY(-1px); }
-
-  .btn-danger {
-    background: ${G.coral};
-    color: ${G.white};
-    border: none;
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    padding: 12px 28px;
-    cursor: pointer;
-    transition: background .2s, transform .15s;
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  }
+  .btn-danger { background: ${G.coral}; color: ${G.white}; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 700; padding: 12px 28px; cursor: pointer; transition: background .2s, transform .15s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
   .btn-danger:hover { background: #e04444; transform: translateY(-1px); }
-
-  .btn-sm {
-    padding: 8px 16px;
-    font-size: 13px;
-    border-radius: 8px;
-  }
-
-  /* ── Input ── */
-  .input {
-    background: rgba(255,255,255,.04);
-    border: 1.5px solid rgba(255,255,255,.1);
-    border-radius: 10px;
-    color: ${G.white};
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    padding: 12px 16px;
-    width: 100%;
-    transition: border-color .2s, background .2s;
-    outline: none;
-  }
+  .btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 8px; }
+  .input { background: rgba(255,255,255,.04); border: 1.5px solid rgba(255,255,255,.1); border-radius: 10px; color: ${G.white}; font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 12px 16px; width: 100%; transition: border-color .2s, background .2s; outline: none; }
   .input:focus { border-color: ${G.emerald}; background: rgba(0,200,150,.04); }
   .input::placeholder { color: ${G.slate}; }
   .input option { background: ${G.navyMid}; }
   textarea.input { resize: vertical; min-height: 100px; }
-
-  /* ── Label ── */
-  .label {
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: ${G.slate};
-    margin-bottom: 6px;
-    display: block;
-  }
-
-  /* ── Badge ── */
-  .badge {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    letter-spacing: .04em;
-  }
+  .label { font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: ${G.slate}; margin-bottom: 6px; display: block; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .04em; }
   .badge-green { background: rgba(0,200,150,.15); color: ${G.emerald}; }
   .badge-amber { background: rgba(255,181,71,.15); color: ${G.amber}; }
   .badge-purple { background: rgba(123,97,255,.15); color: ${G.purple}; }
   .badge-coral { background: rgba(255,95,95,.15); color: ${G.coral}; }
   .badge-slate { background: rgba(74,98,117,.2); color: ${G.slate}; }
-
-  /* ── Top Nav ── */
-  .top-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(13,31,45,.9);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(0,200,150,.1);
-    height: 60px;
-    display: flex; align-items: center; padding: 0 24px; gap: 16px;
-  }
-
-  /* ── Sidebar ── */
-  .sidebar {
-    position: fixed; top: 60px; left: 0; bottom: 0; z-index: 90;
-    width: 220px;
-    background: rgba(13,31,45,.95);
-    backdrop-filter: blur(16px);
-    border-right: 1px solid rgba(0,200,150,.1);
-    display: flex; flex-direction: column;
-    padding: 20px 0;
-    transition: transform .3s ease;
-  }
+  .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(13,31,45,.9); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,200,150,.1); height: 60px; display: flex; align-items: center; padding: 0 24px; gap: 16px; }
+  .sidebar { position: fixed; top: 60px; left: 0; bottom: 0; z-index: 90; width: 220px; background: rgba(13,31,45,.95); backdrop-filter: blur(16px); border-right: 1px solid rgba(0,200,150,.1); display: flex; flex-direction: column; padding: 20px 0; transition: transform .3s ease; }
   .sidebar.collapsed { transform: translateX(-220px); }
-
-  .sidebar-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 20px;
-    cursor: pointer;
-    color: ${G.slate};
-    outline: none;
-    border: none;
-    font-size: 14px; font-weight: 500;
-    border-left: 3px solid transparent;
-    transition: color .2s, background .2s, border-color .2s;
-    text-decoration: none;
-    background: transparent;
-  }
+  .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; cursor: pointer; color: ${G.slate}; outline: none; border: none; font-size: 14px; font-weight: 500; border-left: 3px solid transparent; transition: color .2s, background .2s, border-color .2s; text-decoration: none; background: transparent; }
   .sidebar-item:hover { color: ${G.white}; background: rgba(0,200,150,.12); }
   .sidebar-item.active { color: ${G.emerald}; background: rgba(0,200,150,.15); border-left-color: ${G.emerald}; }
-
-  /* ── Main content ── */
-  .main-content {
-    margin-top: 60px;
-    margin-left: 220px;
-    padding: 32px;
-    min-height: calc(100vh - 60px);
-    transition: margin-left .3s ease;
-  }
+  .main-content { margin-top: 60px; margin-left: 220px; padding: 32px; min-height: calc(100vh - 60px); transition: margin-left .3s ease; }
   .main-content.full { margin-left: 0; }
-
-  /* ── Progress bar ── */
-  .progress-bar {
-    height: 6px; border-radius: 3px;
-    background: rgba(255,255,255,.08);
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; border-radius: 3px;
-    background: linear-gradient(90deg, ${G.emerald}, ${G.emeraldDark});
-    transition: width .6s ease;
-  }
-
-  /* ── Animations ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes flicker {
-    0%,100% { transform: scaleY(1) rotate(-2deg); }
-    50% { transform: scaleY(1.08) rotate(2deg); }
-  }
-  .fade-up  { animation: fadeUp .45s ease both; }
-  .fade-in  { animation: fadeIn .4s ease both; }
+  .progress-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, ${G.emerald}, ${G.emeraldDark}); transition: width .6s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes flicker { 0%,100% { transform: scaleY(1) rotate(-2deg); } 50% { transform: scaleY(1.08) rotate(2deg); } }
+  .fade-up { animation: fadeUp .45s ease both; }
+  .fade-in { animation: fadeIn .4s ease both; }
   .flame { display: inline-block; animation: flicker 1.2s ease-in-out infinite; }
-
-  /* ── Modal overlay ── */
-  .modal-bg {
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(13,31,45,.75);
-    backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px;
-    animation: fadeIn .2s ease;
-  }
-  .modal-box {
-    background: ${G.navyMid};
-    border: 1px solid rgba(0,200,150,.18);
-    border-radius: 20px;
-    padding: 32px;
-    width: 100%; max-width: 520px;
-    animation: fadeUp .3s ease;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  /* ── Checkbox ── */
+  .modal-bg { position: fixed; inset: 0; z-index: 200; background: rgba(13,31,45,.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fadeIn .2s ease; }
+  .modal-box { background: ${G.navyMid}; border: 1px solid rgba(0,200,150,.18); border-radius: 20px; padding: 32px; width: 100%; max-width: 520px; animation: fadeUp .3s ease; max-height: 90vh; overflow-y: auto; }
   input[type=checkbox] { accent-color: ${G.emerald}; width: 16px; height: 16px; cursor: pointer; }
-
-  /* ── Radio card ── */
-  .radio-card {
-    border: 1.5px solid rgba(255,255,255,.1);
-    border-radius: 12px; padding: 14px 16px;
-    cursor: pointer; transition: border-color .2s, background .2s;
-    display: flex; align-items: flex-start; gap: 12px;
-  }
+  .radio-card { border: 1.5px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: border-color .2s, background .2s; display: flex; align-items: flex-start; gap: 12px; }
   .radio-card.selected { border-color: ${G.emerald}; background: rgba(0,200,150,.06); }
   .radio-card:hover { border-color: rgba(0,200,150,.4); }
-
-  /* ── Toast ── */
   @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
-  .toast {
-    position: fixed; bottom: 24px; right: 24px; z-index: 500;
-    background: ${G.navyMid};
-    border: 1px solid ${G.emerald};
-    border-radius: 12px;
-    padding: 14px 20px;
-    display: flex; align-items: center; gap: 10px;
-    font-size: 14px; font-weight: 500;
-    animation: slideIn .3s ease;
-    box-shadow: 0 4px 24px rgba(0,200,150,.2);
-    max-width: 320px;
-  }
-
-  /* ── Table ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 500; background: ${G.navyMid}; border: 1px solid ${G.emerald}; border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; animation: slideIn .3s ease; box-shadow: 0 4px 24px rgba(0,200,150,.2); max-width: 320px; }
   .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid rgba(0,200,150,.1); }
   table { width: 100%; border-collapse: collapse; }
   thead tr { background: rgba(0,200,150,.06); }
   th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: ${G.slate}; }
   td { padding: 14px 16px; font-size: 14px; border-top: 1px solid rgba(255,255,255,.04); }
   tr:hover td { background: rgba(0,200,150,.03); }
-
-  /* ── Stat card ── */
-  .stat-card {
-    background: ${G.navyMid};
-    border: 1px solid rgba(0,200,150,.12);
-    border-radius: 16px;
-    padding: 20px 24px;
-  }
-
-  /* ── Form group ── */
+  .stat-card { background: ${G.navyMid}; border: 1px solid rgba(0,200,150,.12); border-radius: 16px; padding: 20px 24px; }
   .form-group { margin-bottom: 18px; }
-
-  /* ── Divider ── */
   .divider { height: 1px; background: rgba(255,255,255,.06); margin: 24px 0; }
-
-  /* ── Empty state ── */
-  .empty-state {
-    text-align: center;
-    padding: 48px 24px;
-    color: ${G.slate};
-  }
-
-  /* ── Responsive ── */
-  @media (max-width: 768px) {
-    .sidebar { transform: translateX(-220px); }
-    .sidebar.mobile-open { transform: translateX(0); }
-    .main-content { margin-left: 0; padding: 20px 16px; }
-  }
+  .empty-state { text-align: center; padding: 48px 24px; color: ${G.slate}; }
+  @media (max-width: 768px) { .sidebar { transform: translateX(-220px); } .sidebar.mobile-open { transform: translateX(0); } .main-content { margin-left: 0; padding: 20px 16px; } }
 `;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ICONS
 // ═══════════════════════════════════════════════════════════════════════════════
-
 const Icon = ({ name, size = 20, color = "currentColor" }) => {
   const paths = {
     home: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10",
@@ -359,30 +124,15 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
     "check-circle": "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3",
     "alert-circle": "M12 22a10 10 0 100-20 10 10 0 000 20z M12 8v4 M12 16h.01",
     "file-text": "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
-    upload: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M17 8l-5-5-5 5 M12 3v12",
-    download: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3",
     filter: "M22 3H2l8 9.46V19l4 2v-8.54L22 3z",
-    "more-vertical": "M12 5h.01 M12 12h.01 M12 19h.01",
     trophy: "M6 9H3V4h18v5h-3 M12 16v5m-4 0h8 M12 16a7 7 0 100-14 7 7 0 000 14z",
     location: "M12 22s-8-9-8-14a8 8 0 1116 0c0 5-8 14-8 14z M12 12a2 2 0 100-4 2 2 0 000 4z",
     mail: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6",
-    phone: "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z",
     globe: "M12 22a10 10 0 100-20 10 10 0 000 20z M2 12h20 M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z",
-    "external-link": "M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6 M15 3h6v6 M10 14L21 3",
   };
   const d = paths[name] || paths["x"];
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ flexShrink: 0 }}
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
       {d.split(" M").map((seg, i) => (
         <path key={i} d={i === 0 ? seg : "M" + seg} />
       ))}
@@ -391,89 +141,15 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MOCK DATA
+// MOCK DATA (dashboards e listas — não afetados pelo auth)
 // ═══════════════════════════════════════════════════════════════════════════════
-
-const MOCK_ONG = {
-  id: 1,
-  name: "Mão Amiga ONG",
-  cnpj: "12.345.678/0001-90",
-  email: "contato@maoamiga.org.br",
-  phone: "(11) 98765-4321",
-  website: "https://maoamiga.org.br",
-  city: "São Paulo",
-  state: "SP",
-  category: "Social",
-  desc: "Trabalhamos para garantir alimentação e dignidade para famílias em situação de vulnerabilidade social no centro de São Paulo.",
-  founded: "2015",
-  volunteers: 248,
-  hoursImpacted: 3840,
-  actionsCompleted: 127,
-};
-
+const MOCK_ONG = { id: 1, name: "Mão Amiga ONG", cnpj: "12.345.678/0001-90", email: "contato@maoamiga.org.br", phone: "(11) 98765-4321", website: "https://maoamiga.org.br", city: "São Paulo", state: "SP", category: "Social", desc: "Trabalhamos para garantir alimentação e dignidade para famílias em situação de vulnerabilidade social no centro de São Paulo.", founded: "2015", volunteers: 248, hoursImpacted: 3840, actionsCompleted: 127 };
 const MOCK_OPPORTUNITIES = [
-  {
-    id: 1,
-    title: "Distribuição de Refeições",
-    category: "Social",
-    date: "12 Mai",
-    time: "08h–12h",
-    location: "Centro, SP",
-    hours: 4,
-    spots: 12,
-    filled: 9,
-    badge: "amber",
-    desc: "Participe da distribuição de marmitas para pessoas em situação de rua. Importante e urgente! Venha com roupa confortável.",
-    skills: ["Trabalho em equipe", "Empatia", "Pontualidade"],
-    status: "active",
-  },
-  {
-    id: 2,
-    title: "Tutoria em Matemática",
-    category: "Educação",
-    date: "15 Mai",
-    time: "14h–16h",
-    location: "Pinheiros, SP",
-    hours: 2,
-    spots: 8,
-    filled: 3,
-    badge: "green",
-    desc: "Ajude crianças e adolescentes em situação de vulnerabilidade a superarem dificuldades em matemática.",
-    skills: ["Paciência", "Matemática", "Comunicação"],
-    status: "active",
-  },
-  {
-    id: 3,
-    title: "Oficina de Artesanato",
-    category: "Cultura",
-    date: "20 Mai",
-    time: "10h–13h",
-    location: "Vila Madalena, SP",
-    hours: 3,
-    spots: 15,
-    filled: 15,
-    badge: "purple",
-    desc: "Oficina de artesanato para idosos em asilo parceiro. Traga criatividade e boa vontade!",
-    skills: ["Criatividade", "Paciência", "Empatia"],
-    status: "closed",
-  },
-  {
-    id: 4,
-    title: "Mutirão de Limpeza",
-    category: "Meio Ambiente",
-    date: "25 Mai",
-    time: "07h–10h",
-    location: "Parque Estadual, SP",
-    hours: 3,
-    spots: 20,
-    filled: 5,
-    badge: "green",
-    desc: "Mutirão de limpeza do parque estadual. Traga protetor solar e luvas (fornecemos sacos e ferramentas).",
-    skills: ["Consciência ambiental", "Trabalho em equipe"],
-    status: "draft",
-  },
+  { id: 1, title: "Distribuição de Refeições", category: "Social", date: "12 Mai", time: "08h–12h", location: "Centro, SP", hours: 4, spots: 12, filled: 9, badge: "amber", desc: "Participe da distribuição de marmitas para pessoas em situação de rua.", skills: ["Trabalho em equipe", "Empatia", "Pontualidade"], status: "active" },
+  { id: 2, title: "Tutoria em Matemática", category: "Educação", date: "15 Mai", time: "14h–16h", location: "Pinheiros, SP", hours: 2, spots: 8, filled: 3, badge: "green", desc: "Ajude crianças e adolescentes em situação de vulnerabilidade a superarem dificuldades em matemática.", skills: ["Paciência", "Matemática", "Comunicação"], status: "active" },
+  { id: 3, title: "Oficina de Artesanato", category: "Cultura", date: "20 Mai", time: "10h–13h", location: "Vila Madalena, SP", hours: 3, spots: 15, filled: 15, badge: "purple", desc: "Oficina de artesanato para idosos em asilo parceiro.", skills: ["Criatividade", "Paciência", "Empatia"], status: "closed" },
+  { id: 4, title: "Mutirão de Limpeza", category: "Meio Ambiente", date: "25 Mai", time: "07h–10h", location: "Parque Estadual, SP", hours: 3, spots: 20, filled: 5, badge: "green", desc: "Mutirão de limpeza do parque estadual.", skills: ["Consciência ambiental", "Trabalho em equipe"], status: "draft" },
 ];
-
 const MOCK_ENROLLEES = [
   { id: 1, opportunityId: 1, name: "Maria Silva", email: "maria@email.com", phone: "(11) 99999-1111", city: "São Paulo", enrolledAt: "2 Mai", status: "confirmed", checkedIn: true },
   { id: 2, opportunityId: 1, name: "João Santos", email: "joao@email.com", phone: "(11) 99999-2222", city: "São Paulo", enrolledAt: "3 Mai", status: "confirmed", checkedIn: false },
@@ -484,25 +160,13 @@ const MOCK_ENROLLEES = [
   { id: 7, opportunityId: 2, name: "Beatriz Lima", email: "beatriz@email.com", phone: "(11) 99999-7777", city: "São Paulo", enrolledAt: "5 Mai", status: "confirmed", checkedIn: false },
   { id: 8, opportunityId: 2, name: "Rafael Souza", email: "rafael@email.com", phone: "(11) 99999-8888", city: "Osasco", enrolledAt: "6 Mai", status: "pending", checkedIn: false },
 ];
-
 const CATEGORIES = ["Social", "Educação", "Saúde", "Meio Ambiente", "Cultura", "Esporte", "Tecnologia", "Outro"];
 const STATES = ["SP", "RJ", "MG", "RS", "PR", "SC", "BA", "PE", "CE", "GO", "DF"];
-
-const BADGE_MAP = {
-  "Social": "amber",
-  "Educação": "green",
-  "Saúde": "purple",
-  "Meio Ambiente": "green",
-  "Cultura": "purple",
-  "Esporte": "amber",
-  "Tecnologia": "green",
-  "Outro": "amber",
-};
+const BADGE_MAP = { "Social": "amber", "Educação": "green", "Saúde": "purple", "Meio Ambiente": "green", "Cultura": "purple", "Esporte": "amber", "Tecnologia": "green", "Outro": "amber" };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONTEXT & HOOKS
+// CONTEXT
 // ═══════════════════════════════════════════════════════════════════════════════
-
 const OngContext = createContext(null);
 
 function OngProvider({ children }) {
@@ -513,29 +177,13 @@ function OngProvider({ children }) {
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  const showToast = (msg, icon = "✅") => {
-    setToast({ msg, icon });
-    setTimeout(() => setToast(null), 3200);
-  };
-
-  const addOpportunity = (op) => {
-    const newOp = { ...op, id: Date.now(), filled: 0 };
-    setOpportunities(prev => [newOp, ...prev]);
-  };
-
-  const updateOpportunity = (op) => {
-    setOpportunities(prev => prev.map(o => o.id === op.id ? op : o));
-  };
-
-  const deleteOpportunity = (id) => {
-    setOpportunities(prev => prev.filter(o => o.id !== id));
-  };
+  const showToast = (msg, icon = "✅") => { setToast({ msg, icon }); setTimeout(() => setToast(null), 3200); };
+  const addOpportunity = (op) => setOpportunities(prev => [{ ...op, id: Date.now(), filled: 0 }, ...prev]);
+  const updateOpportunity = (op) => setOpportunities(prev => prev.map(o => o.id === op.id ? op : o));
+  const deleteOpportunity = (id) => setOpportunities(prev => prev.filter(o => o.id !== id));
 
   return (
-    <OngContext.Provider value={{
-      screen, setScreen, ong, setOng, opportunities, addOpportunity, updateOpportunity, deleteOpportunity,
-      enrollees, toast, showToast, activeTab, setActiveTab,
-    }}>
+    <OngContext.Provider value={{ screen, setScreen, ong, setOng, opportunities, addOpportunity, updateOpportunity, deleteOpportunity, enrollees, toast, showToast, activeTab, setActiveTab }}>
       {children}
     </OngContext.Provider>
   );
@@ -548,9 +196,8 @@ function useOng() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMPONENTS
+// COMPONENTES AUXILIARES
 // ═══════════════════════════════════════════════════════════════════════════════
-
 const Toast = ({ msg, icon = "✅", onDone }) => {
   useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, []);
   return <div className="toast"><span>{icon}</span><span>{msg}</span></div>;
@@ -564,32 +211,36 @@ const Blobs = () => (
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCREENS
+// 1. LoginScreen
 // ═══════════════════════════════════════════════════════════════════════════════
-
-// ── 1. Login ──
 const LoginScreen = () => {
   const { setScreen } = useOng();
-  const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
+  const [usuario, setUsuario] = useState("");
+  const [senha, setSenha] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
-  const handleLogin = () => setScreen("portal");
+  const handleLogin = async () => {
+    if (!usuario.trim() || !senha.trim()) { setErro("Preencha usuário e senha."); return; }
+    setCarregando(true);
+    setErro("");
+    try {
+      await login({ usuario, senha });
+      setScreen("portal");
+    } catch {
+      setErro("Usuário ou senha inválidos.");
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   return (
-    <div style={{
-      minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center",
-      alignItems: "center", padding: 24, position: "relative", overflow: "hidden",
-    }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 24, position: "relative", overflow: "hidden" }}>
       <Blobs />
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 420 }} className="fade-up">
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: 18,
-            background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px", boxShadow: `0 8px 32px rgba(0,200,150,.35)`,
-          }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 32px rgba(0,200,150,.35)` }}>
             <span style={{ fontSize: 28 }}>🌱</span>
           </div>
           <h1 className="syne" style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.02em" }}>Kindly</h1>
@@ -600,27 +251,30 @@ const LoginScreen = () => {
           <h2 className="syne" style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>Entrar na sua ONG</h2>
 
           <div className="form-group">
-            <label className="label">E-mail institucional</label>
-            <input className="input" type="email" placeholder="contato@suaong.org.br" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} />
+            <label className="label">Usuário</label>
+            <input className="input" type="text" placeholder="usuario_da_ong" value={usuario} onChange={e => setUsuario(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} />
           </div>
 
-          <div className="form-group" style={{ marginBottom: 24 }}>
+          <div className="form-group" style={{ marginBottom: erro ? 12 : 24 }}>
             <label className="label">Senha</label>
             <div style={{ position: "relative" }}>
-              <input className="input" type={showPass ? "text" : "password"} placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} style={{ paddingRight: 44 }} />
+              <input className="input" type={showPass ? "text" : "password"} placeholder="••••••••" value={senha} onChange={e => setSenha(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} style={{ paddingRight: 44 }} />
               <button onClick={() => setShowPass(s => !s)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: G.slate, display: "flex", alignItems: "center" }}>
                 <Icon name={showPass ? "eye-off" : "eye"} size={16} color={G.slate} />
               </button>
             </div>
           </div>
 
-          <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={handleLogin}>
+          {erro && <p style={{ fontSize: 13, color: G.coral, marginBottom: 16 }}>{erro}</p>}
+
+          <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={handleLogin} disabled={carregando}>
             <Icon name="building" size={16} color={G.navy} />
-            Acessar Portal
+            {carregando ? "Entrando…" : "Acessar Portal"}
           </button>
 
           <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: G.slate }}>
-            Ainda não tem cadastro? <span style={{ color: G.emerald, cursor: "pointer", fontWeight: 600 }} onClick={() => setScreen("register")}>Cadastrar ONG</span>
+            Ainda não tem cadastro?{" "}
+            <span style={{ color: G.emerald, cursor: "pointer", fontWeight: 600 }} onClick={() => setScreen("register")}>Cadastrar ONG</span>
           </div>
         </div>
 
@@ -637,96 +291,66 @@ const LoginScreen = () => {
   );
 };
 
-// ── 2. Register (multi-step) ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. RegisterScreen
+// ═══════════════════════════════════════════════════════════════════════════════
 const RegisterScreen = () => {
   const { setScreen, showToast } = useOng();
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState({
-    orgName: "", cnpj: "", category: "", desc: "",
-    city: "", state: "", phone: "", email: "", website: "",
-    respName: "", respEmail: "", pass: "", passConfirm: "", terms: false,
-  });
+  const [form, setForm] = useState({ orgName: "", cnpj: "", category: "", desc: "", city: "", state: "", phone: "", email: "", website: "", respNome: "", cpf: "", usuario: "", pass: "", passConfirm: "", terms: false });
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleDone = () => {
-    showToast("ONG cadastrada com sucesso! Bem-vinda ao Kindly 🎉", "🌱");
-    setScreen("portal");
+  const handleDone = async () => {
+    if (form.pass !== form.passConfirm) { setErro("As senhas não coincidem."); return; }
+    if (!form.terms) { setErro("Aceite os termos para continuar."); return; }
+    if (form.cpf.replace(/\D/g, "").length !== 11) { setErro("CPF deve ter 11 dígitos."); return; }
+    setCarregando(true);
+    setErro("");
+    try {
+      await registrar({ nome: form.respNome, cpf: form.cpf.replace(/\D/g, ""), usuario: form.usuario, senha: form.pass, motor: null });
+      showToast("ONG cadastrada com sucesso! Bem-vinda ao Kindly 🎉", "🌱");
+      setScreen("portal");
+    } catch (e) {
+      const msg = e?.response?.data;
+      setErro(typeof msg === "string" ? msg : "Erro ao criar conta. Verifique os dados.");
+    } finally {
+      setCarregando(false);
+    }
   };
 
   const steps = [
     <div key="0" className="fade-up">
       <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Dados da ONG 🏢</h2>
       <p style={{ color: G.slate, fontSize: 14, marginBottom: 24 }}>Informações básicas da sua organização.</p>
-      <div className="form-group">
-        <label className="label">Nome da ONG</label>
-        <input className="input" type="text" placeholder="Ex: Instituto Futuro" value={form.orgName} onChange={e => upd("orgName", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">CNPJ</label>
-        <input className="input" type="text" placeholder="00.000.000/0001-00" value={form.cnpj} onChange={e => upd("cnpj", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">Área de atuação</label>
-        <select className="input" value={form.category} onChange={e => upd("category", e.target.value)}>
-          <option value="">Selecione uma categoria</option>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-      <div className="form-group">
-        <label className="label">Descrição</label>
-        <textarea className="input" placeholder="Descreva brevemente a missão da sua ONG..." value={form.desc} onChange={e => upd("desc", e.target.value)} />
-      </div>
+      <div className="form-group"><label className="label">Nome da ONG</label><input className="input" type="text" placeholder="Ex: Instituto Futuro" value={form.orgName} onChange={e => upd("orgName", e.target.value)} /></div>
+      <div className="form-group"><label className="label">CNPJ</label><input className="input" type="text" placeholder="00.000.000/0001-00" value={form.cnpj} onChange={e => upd("cnpj", e.target.value)} /></div>
+      <div className="form-group"><label className="label">Área de atuação</label><select className="input" value={form.category} onChange={e => upd("category", e.target.value)}><option value="">Selecione uma categoria</option>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+      <div className="form-group"><label className="label">Descrição</label><textarea className="input" placeholder="Descreva brevemente a missão da sua ONG..." value={form.desc} onChange={e => upd("desc", e.target.value)} /></div>
     </div>,
 
     <div key="1" className="fade-up">
       <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Localização & Contato 📍</h2>
       <p style={{ color: G.slate, fontSize: 14, marginBottom: 24 }}>Como os voluntários vão te encontrar?</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12 }}>
-        <div className="form-group">
-          <label className="label">Cidade</label>
-          <input className="input" type="text" placeholder="São Paulo" value={form.city} onChange={e => upd("city", e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="label">Estado</label>
-          <select className="input" value={form.state} onChange={e => upd("state", e.target.value)} style={{ width: 80 }}>
-            <option value="">UF</option>
-            {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
+        <div className="form-group"><label className="label">Cidade</label><input className="input" type="text" placeholder="São Paulo" value={form.city} onChange={e => upd("city", e.target.value)} /></div>
+        <div className="form-group"><label className="label">Estado</label><select className="input" value={form.state} onChange={e => upd("state", e.target.value)} style={{ width: 80 }}><option value="">UF</option>{STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
       </div>
-      <div className="form-group">
-        <label className="label">Telefone</label>
-        <input className="input" type="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={e => upd("phone", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">E-mail institucional</label>
-        <input className="input" type="email" placeholder="contato@suaong.org.br" value={form.email} onChange={e => upd("email", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">Website (opcional)</label>
-        <input className="input" type="url" placeholder="https://suaong.org.br" value={form.website} onChange={e => upd("website", e.target.value)} />
-      </div>
+      <div className="form-group"><label className="label">Telefone</label><input className="input" type="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={e => upd("phone", e.target.value)} /></div>
+      <div className="form-group"><label className="label">E-mail institucional</label><input className="input" type="email" placeholder="contato@suaong.org.br" value={form.email} onChange={e => upd("email", e.target.value)} /></div>
+      <div className="form-group"><label className="label">Website (opcional)</label><input className="input" type="url" placeholder="https://suaong.org.br" value={form.website} onChange={e => upd("website", e.target.value)} /></div>
     </div>,
 
     <div key="2" className="fade-up">
       <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Responsável & Acesso 🔐</h2>
       <p style={{ color: G.slate, fontSize: 14, marginBottom: 24 }}>Quem vai gerenciar o portal?</p>
-      <div className="form-group">
-        <label className="label">Nome do responsável</label>
-        <input className="input" type="text" placeholder="Ana Souza" value={form.respName} onChange={e => upd("respName", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">E-mail do responsável</label>
-        <input className="input" type="email" placeholder="ana@suaong.org.br" value={form.respEmail} onChange={e => upd("respEmail", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">Senha</label>
-        <input className="input" type="password" placeholder="••••••••" value={form.pass} onChange={e => upd("pass", e.target.value)} />
-      </div>
-      <div className="form-group">
-        <label className="label">Confirmar senha</label>
-        <input className="input" type="password" placeholder="••••••••" value={form.passConfirm} onChange={e => upd("passConfirm", e.target.value)} />
-      </div>
+      <div className="form-group"><label className="label">Nome completo</label><input className="input" type="text" placeholder="Ana Souza" value={form.respNome} onChange={e => upd("respNome", e.target.value)} /></div>
+      <div className="form-group"><label className="label">CPF (só números)</label><input className="input" type="text" placeholder="00000000000" value={form.cpf} onChange={e => upd("cpf", e.target.value)} /></div>
+      <div className="form-group"><label className="label">Nome de usuário</label><input className="input" type="text" placeholder="ana_souza" value={form.usuario} onChange={e => upd("usuario", e.target.value)} /></div>
+      <div className="form-group"><label className="label">Senha</label><input className="input" type="password" placeholder="••••••••" value={form.pass} onChange={e => upd("pass", e.target.value)} /></div>
+      <div className="form-group"><label className="label">Confirmar senha</label><input className="input" type="password" placeholder="••••••••" value={form.passConfirm} onChange={e => upd("passConfirm", e.target.value)} /></div>
+      {erro && <p style={{ fontSize: 13, color: G.coral, marginBottom: 12 }}>{erro}</p>}
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 8 }}>
         <input type="checkbox" id="terms" checked={form.terms} onChange={e => upd("terms", e.target.checked)} />
         <label htmlFor="terms" style={{ fontSize: 13, color: G.slate, lineHeight: 1.5, cursor: "pointer" }}>
@@ -744,61 +368,41 @@ const RegisterScreen = () => {
           <button onClick={() => step === 0 ? setScreen("login") : setStep(s => s - 1)} style={{ background: "none", border: "none", color: G.white, cursor: "pointer", padding: 4 }}>
             <Icon name="arrow" size={20} />
           </button>
-          <div style={{ flex: 1 }}>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${((step + 1) / 3) * 100}%` }} />
-            </div>
-          </div>
+          <div style={{ flex: 1 }}><div className="progress-bar"><div className="progress-fill" style={{ width: `${((step + 1) / 3) * 100}%` }} /></div></div>
           <span style={{ fontSize: 12, color: G.slate, fontWeight: 600 }}>{step + 1}/3</span>
         </div>
-
-        <div className="card-static" style={{ padding: 28 }}>
-          {steps[step]}
-        </div>
-
+        <div className="card-static" style={{ padding: 28 }}>{steps[step]}</div>
         <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
           {step > 0 && <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setStep(s => s - 1)}>Voltar</button>}
-          <button className="btn-primary" style={{ flex: 2 }} onClick={() => step < 2 ? setStep(s => s + 1) : handleDone()}>
-            {step < 2 ? "Continuar" : "Cadastrar ONG"}
+          <button className="btn-primary" style={{ flex: 2 }} onClick={() => step < 2 ? setStep(s => s + 1) : handleDone()} disabled={carregando}>
+            {step < 2 ? "Continuar" : carregando ? "Cadastrando…" : "Cadastrar ONG"}
           </button>
         </div>
-
-        {step === 0 && (
-          <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: G.slate }}>
-            Já tem cadastro? <span style={{ color: G.emerald, cursor: "pointer", fontWeight: 600 }} onClick={() => setScreen("login")}>Entrar</span>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-// ── 3. Dashboard ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. DashboardTab
+// ═══════════════════════════════════════════════════════════════════════════════
 const DashboardTab = () => {
   const { ong, opportunities, enrollees, setActiveTab } = useOng();
-
   const activeOps = opportunities.filter(o => o.status === "active");
-  const totalEnrollees = enrollees.length;
   const confirmedEnrollees = enrollees.filter(e => e.status === "confirmed").length;
   const checkedIn = enrollees.filter(e => e.checkedIn).length;
-
-  const recentOps = opportunities.slice(0, 3);
-  const recentEnrollees = enrollees.slice(0, 5);
-
   const stats = [
     { icon: "calendar", label: "Oportunidades Ativas", value: activeOps.length, color: G.emerald, sub: `${opportunities.length} total` },
-    { icon: "users", label: "Total de Inscritos", value: totalEnrollees, color: G.purple, sub: `${confirmedEnrollees} confirmados` },
+    { icon: "users", label: "Total de Inscritos", value: enrollees.length, color: G.purple, sub: `${confirmedEnrollees} confirmados` },
     { icon: "check-circle", label: "Check-ins Realizados", value: checkedIn, color: G.amber, sub: "presença confirmada" },
     { icon: "clock", label: "Horas de Impacto", value: `${ong.hoursImpacted}h`, color: G.emerald, sub: "horas doadas" },
   ];
-
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 28 }}>
         <p style={{ color: G.slate, fontSize: 13 }}>Bem-vinda de volta 👋</p>
         <h2 className="syne" style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em" }}>{ong.name}</h2>
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 32 }}>
         {stats.map((s, i) => (
           <div key={s.label} className="stat-card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
@@ -813,7 +417,6 @@ const DashboardTab = () => {
           </div>
         ))}
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <div className="card-static fade-up" style={{ padding: 20, animationDelay: ".24s" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -821,7 +424,7 @@ const DashboardTab = () => {
             <button onClick={() => setActiveTab("opportunities")} style={{ background: "none", border: "none", color: G.emerald, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Ver todas →</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {recentOps.map(op => (
+            {opportunities.slice(0, 3).map(op => (
               <div key={op.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: `rgba(0,200,150,.1)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon name="calendar" size={16} color={G.emerald} />
@@ -830,44 +433,34 @@ const DashboardTab = () => {
                   <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{op.title}</div>
                   <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>{op.date} · {op.filled}/{op.spots} vagas</div>
                 </div>
-                <span className={`badge badge-${op.badge}`}>{op.status === "active" ? "Ativa" : op.status === "draft" ? "Rascunho" : "Encerrada"}</span>
+                <span className={`badge badge-${op.status === "active" ? "green" : op.status === "draft" ? "amber" : "slate"}`}>{op.status === "active" ? "Ativa" : op.status === "draft" ? "Rascunho" : "Encerrada"}</span>
               </div>
             ))}
           </div>
         </div>
-
         <div className="card-static fade-up" style={{ padding: 20, animationDelay: ".3s" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h3 className="syne" style={{ fontSize: 15, fontWeight: 700 }}>Inscrições Recentes</h3>
             <button onClick={() => setActiveTab("enrollees")} style={{ background: "none", border: "none", color: G.emerald, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Ver todas →</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {recentEnrollees.map(e => (
+            {enrollees.slice(0, 5).map(e => (
               <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>
-                  {e.name[0]}
-                </div>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>{e.name[0]}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
                   <div style={{ fontSize: 11, color: G.slate }}>{e.enrolledAt}</div>
                 </div>
-                <span className={`badge badge-${e.status === "confirmed" ? "green" : e.status === "pending" ? "amber" : "coral"}`}>
-                  {e.status === "confirmed" ? "Confirmado" : e.status === "pending" ? "Pendente" : "Cancelado"}
-                </span>
+                <span className={`badge badge-${e.status === "confirmed" ? "green" : e.status === "pending" ? "amber" : "coral"}`}>{e.status === "confirmed" ? "Confirmado" : e.status === "pending" ? "Pendente" : "Cancelado"}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
-
       <div className="card-static fade-up" style={{ padding: 24, marginTop: 20, animationDelay: ".36s" }}>
         <h3 className="syne" style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>🏆 Resumo de Impacto</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
-          {[
-            [ong.volunteers, "Voluntários mobilizados"],
-            [ong.hoursImpacted + "h", "Horas de impacto"],
-            [ong.actionsCompleted, "Ações concluídas"],
-          ].map(([v, l], i) => (
+          {[[ong.volunteers, "Voluntários mobilizados"], [ong.hoursImpacted + "h", "Horas de impacto"], [ong.actionsCompleted, "Ações concluídas"]].map(([v, l], i) => (
             <div key={String(l)} style={{ textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none", padding: "0 16px" }}>
               <div className="syne" style={{ fontSize: 28, fontWeight: 800, color: G.emerald }}>{v}</div>
               <div style={{ fontSize: 12, color: G.slate, marginTop: 4 }}>{l}</div>
@@ -879,26 +472,16 @@ const DashboardTab = () => {
   );
 };
 
-// ── 4. Oportunidades ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4. OpportunitiesTab
+// ═══════════════════════════════════════════════════════════════════════════════
 const OpportunitiesTab = () => {
   const { opportunities, deleteOpportunity, updateOpportunity, setActiveTab, showToast, enrollees } = useOng();
   const [filter, setFilter] = useState("all");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-
   const filtered = filter === "all" ? opportunities : opportunities.filter(o => o.status === filter);
-
-  const handleDelete = (id) => {
-    deleteOpportunity(id);
-    setDeleteConfirm(null);
-    showToast("Oportunidade removida.", "🗑️");
-  };
-
-  const handleToggleStatus = (op) => {
-    const next = op.status === "active" ? "closed" : "active";
-    updateOpportunity({ ...op, status: next });
-    showToast(`Oportunidade ${next === "active" ? "ativada" : "encerrada"}.`, next === "active" ? "✅" : "🔒");
-  };
-
+  const handleDelete = (id) => { deleteOpportunity(id); setDeleteConfirm(null); showToast("Oportunidade removida.", "🗑️"); };
+  const handleToggleStatus = (op) => { const next = op.status === "active" ? "closed" : "active"; updateOpportunity({ ...op, status: next }); showToast(`Oportunidade ${next === "active" ? "ativada" : "encerrada"}.`, next === "active" ? "✅" : "🔒"); };
   const getEnrolleeCount = (opId) => enrollees.filter(e => e.opportunityId === opId).length;
 
   return (
@@ -908,103 +491,60 @@ const OpportunitiesTab = () => {
           <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Minhas Oportunidades</h2>
           <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>{opportunities.length} oportunidade{opportunities.length !== 1 ? "s" : ""} cadastrada{opportunities.length !== 1 ? "s" : ""}</p>
         </div>
-        <button className="btn-primary btn-sm" onClick={() => setActiveTab("create")}>
-          <Icon name="plus" size={14} color={G.navy} />
-          Nova
-        </button>
+        <button className="btn-primary btn-sm" onClick={() => setActiveTab("create")}><Icon name="plus" size={14} color={G.navy} />Nova</button>
       </div>
-
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-        {(["all", "active", "draft", "closed"]).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              background: filter === f ? G.emerald : "rgba(255,255,255,.05)",
-              color: filter === f ? G.navy : G.white,
-              border: "none", borderRadius: 20, padding: "7px 16px", cursor: "pointer",
-              fontSize: 13, fontWeight: 600,
-              fontFamily: "'Syne', sans-serif", transition: "all .2s",
-            }}
-          >
+        {["all", "active", "draft", "closed"].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.emerald : "rgba(255,255,255,.05)", color: filter === f ? G.navy : G.white, border: "none", borderRadius: 20, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Syne', sans-serif", transition: "all .2s" }}>
             {f === "all" ? "Todas" : f === "active" ? "Ativa" : f === "draft" ? "Rascunho" : "Encerrada"}
-            <span style={{
-              marginLeft: 6, fontSize: 11,
-              background: filter === f ? "rgba(13,31,45,.2)" : "rgba(255,255,255,.08)",
-              padding: "1px 6px", borderRadius: 10,
-            }}>
+            <span style={{ marginLeft: 6, fontSize: 11, background: filter === f ? "rgba(13,31,45,.2)" : "rgba(255,255,255,.08)", padding: "1px 6px", borderRadius: 10 }}>
               {f === "all" ? opportunities.length : opportunities.filter(o => o.status === f).length}
             </span>
           </button>
         ))}
       </div>
-
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhuma oportunidade aqui</p>
-          <p style={{ fontSize: 13, marginBottom: 20 }}>Crie sua primeira oportunidade para começar a mobilizar voluntários.</p>
-          <button className="btn-primary" onClick={() => setActiveTab("create")}>
-            <Icon name="plus" size={16} color={G.navy} />
-            Criar Oportunidade
-          </button>
-        </div>
+        <div className="empty-state"><div style={{ fontSize: 40, marginBottom: 12 }}>📋</div><p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhuma oportunidade aqui</p><button className="btn-primary" onClick={() => setActiveTab("create")}><Icon name="plus" size={16} color={G.navy} />Criar Oportunidade</button></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {filtered.map((op, i) => (
             <div key={op.id} className="card fade-up" style={{ padding: 20, animationDelay: `${i * 0.06}s` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 8 }}>
                   <span className={`badge badge-${op.badge}`}>{op.category}</span>
                   <span className={`badge badge-${op.status === "active" ? "green" : op.status === "draft" ? "amber" : "slate"}`}>{op.status === "active" ? "Ativa" : op.status === "draft" ? "Rascunho" : "Encerrada"}</span>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button title={op.status === "active" ? "Encerrar" : "Ativar"} onClick={() => handleToggleStatus(op)} style={{ background: "rgba(255,255,255,.05)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: G.slate, transition: "all .2s" }}>
-                    <Icon name={op.status === "active" ? "eye-off" : "eye"} size={15} color={G.slate} />
-                  </button>
-                  <button title="Excluir" onClick={() => setDeleteConfirm(op.id)} style={{ background: "rgba(255,95,95,.08)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer", transition: "all .2s" }}>
-                    <Icon name="trash" size={15} color={G.coral} />
-                  </button>
+                  <button title={op.status === "active" ? "Encerrar" : "Ativar"} onClick={() => handleToggleStatus(op)} style={{ background: "rgba(255,255,255,.05)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><Icon name={op.status === "active" ? "eye-off" : "eye"} size={15} color={G.slate} /></button>
+                  <button title="Excluir" onClick={() => setDeleteConfirm(op.id)} style={{ background: "rgba(255,95,95,.08)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><Icon name="trash" size={15} color={G.coral} /></button>
                 </div>
               </div>
-
               <h3 className="syne" style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{op.title}</h3>
               <p style={{ fontSize: 13, color: G.slate, marginBottom: 14, lineHeight: 1.5 }}>{op.desc.slice(0, 100)}...</p>
-
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
-                {[["calendar", op.date], ["clock", op.time], ["map", op.location], ["clock", `${op.hours}h`]].map(([ic, val]) => (
-                  <div key={ic + val} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}>
-                    <Icon name={ic} size={13} color={G.slate} /> {val}
-                  </div>
+                {[["calendar", op.date], ["clock", op.time], ["map", op.location]].map(([ic, val]) => (
+                  <div key={ic + val} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}><Icon name={ic} size={13} color={G.slate} /> {val}</div>
                 ))}
               </div>
-
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: G.slate, marginBottom: 6 }}>
                   <span>Vagas preenchidas</span>
                   <span style={{ color: op.filled >= op.spots ? G.coral : G.emerald }}>{op.filled}/{op.spots}</span>
                 </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${Math.min((op.filled / op.spots) * 100, 100)}%` }} />
-                </div>
+                <div className="progress-bar"><div className="progress-fill" style={{ width: `${Math.min((op.filled / op.spots) * 100, 100)}%` }} /></div>
               </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: G.slate }}>
-                <Icon name="users" size={13} color={G.slate} />
-                {getEnrolleeCount(op.id)} inscrito{getEnrolleeCount(op.id) !== 1 ? "s" : ""}
-              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: G.slate }}><Icon name="users" size={13} color={G.slate} />{getEnrolleeCount(op.id)} inscrito{getEnrolleeCount(op.id) !== 1 ? "s" : ""}</div>
             </div>
           ))}
         </div>
       )}
-
       {deleteConfirm !== null && (
         <div className="modal-bg" onClick={() => setDeleteConfirm(null)}>
           <div className="modal-box" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
               <h3 className="syne" style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Excluir oportunidade?</h3>
-              <p style={{ color: G.slate, fontSize: 14 }}>Esta ação não pode ser desfeita. Os inscritos serão notificados.</p>
+              <p style={{ color: G.slate, fontSize: 14 }}>Esta ação não pode ser desfeita.</p>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteConfirm(null)}>Cancelar</button>
@@ -1017,18 +557,14 @@ const OpportunitiesTab = () => {
   );
 };
 
-// ── 5. Criar Oportunidade ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// 5. CreateOpportunityTab
+// ═══════════════════════════════════════════════════════════════════════════════
 const CreateOpportunityTab = () => {
   const { addOpportunity, setActiveTab, showToast } = useOng();
-  const [form, setForm] = useState({
-    title: "", category: "", date: "", time: "", location: "",
-    hours: "", spots: "", desc: "", skills: "", status: "active",
-  });
+  const [form, setForm] = useState({ title: "", category: "", date: "", time: "", location: "", hours: "", spots: "", desc: "", skills: "" });
   const [errors, setErrors] = useState({});
-  const upd = (k, v) => {
-    setForm(f => ({ ...f, [k]: v }));
-    setErrors(e => ({ ...e, [k]: "" }));
-  };
+  const upd = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })); };
 
   const validate = () => {
     const e = {};
@@ -1046,31 +582,14 @@ const CreateOpportunityTab = () => {
 
   const handleSubmit = (status) => {
     if (!validate()) return;
-    const op = {
-      title: form.title,
-      category: form.category,
-      date: form.date,
-      time: form.time,
-      location: form.location,
-      hours: Number(form.hours),
-      spots: Number(form.spots),
-      badge: BADGE_MAP[form.category] || "green",
-      desc: form.desc,
-      skills: form.skills.split(",").map(s => s.trim()).filter(Boolean),
-      status,
-    };
-    addOpportunity(op);
-    setForm({ title: "", category: "", date: "", time: "", location: "", hours: "", spots: "", desc: "", skills: "", status: "active" });
-    showToast(status === "active" ? "Oportunidade publicada com sucesso! 🎉" : "Rascunho salvo.", status === "active" ? "✅" : "💾");
+    addOpportunity({ title: form.title, category: form.category, date: form.date, time: form.time, location: form.location, hours: Number(form.hours), spots: Number(form.spots), badge: BADGE_MAP[form.category] || "green", desc: form.desc, skills: form.skills.split(",").map(s => s.trim()).filter(Boolean), status });
+    setForm({ title: "", category: "", date: "", time: "", location: "", hours: "", spots: "", desc: "", skills: "" });
+    showToast(status === "active" ? "Oportunidade publicada! 🎉" : "Rascunho salvo.", status === "active" ? "✅" : "💾");
     setActiveTab("opportunities");
   };
 
   const Field = ({ label, error, children }) => (
-    <div className="form-group">
-      <label className="label">{label}</label>
-      {children}
-      {error && <span style={{ fontSize: 11, color: G.coral, marginTop: 4, display: "block" }}>{error}</span>}
-    </div>
+    <div className="form-group"><label className="label">{label}</label>{children}{error && <span style={{ fontSize: 11, color: G.coral, marginTop: 4, display: "block" }}>{error}</span>}</div>
   );
 
   return (
@@ -1079,118 +598,50 @@ const CreateOpportunityTab = () => {
         <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Nova Oportunidade</h2>
         <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Preencha os detalhes para mobilizar voluntários.</p>
       </div>
-
       <div className="card-static" style={{ padding: 28 }}>
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-            <div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} />
-            <span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Informações Básicas</span>
-          </div>
-
-          <Field label="Título da oportunidade" error={errors.title}>
-            <input className="input" type="text" placeholder="Ex: Tutoria em Matemática" value={form.title} onChange={e => upd("title", e.target.value)} style={errors.title ? { borderColor: G.coral } : {}} />
-          </Field>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Field label="Categoria" error={errors.category}>
-              <select className="input" value={form.category} onChange={e => upd("category", e.target.value)} style={errors.category ? { borderColor: G.coral } : {}}>
-                <option value="">Selecione</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="Local" error={errors.location}>
-              <input className="input" type="text" placeholder="Ex: Centro, São Paulo" value={form.location} onChange={e => upd("location", e.target.value)} style={errors.location ? { borderColor: G.coral } : {}} />
-            </Field>
-          </div>
-
-          <Field label="Descrição" error={errors.desc}>
-            <textarea className="input" placeholder="Descreva a atividade, o que o voluntário vai fazer, o que levar..." value={form.desc} onChange={e => upd("desc", e.target.value)} style={{ minHeight: 110, ...(errors.desc ? { borderColor: G.coral } : {}) }} />
-          </Field>
+        <Field label="Título da oportunidade" error={errors.title}><input className="input" type="text" placeholder="Ex: Tutoria em Matemática" value={form.title} onChange={e => upd("title", e.target.value)} style={errors.title ? { borderColor: G.coral } : {}} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <Field label="Categoria" error={errors.category}><select className="input" value={form.category} onChange={e => upd("category", e.target.value)} style={errors.category ? { borderColor: G.coral } : {}}><option value="">Selecione</option>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
+          <Field label="Local" error={errors.location}><input className="input" type="text" placeholder="Ex: Centro, São Paulo" value={form.location} onChange={e => upd("location", e.target.value)} style={errors.location ? { borderColor: G.coral } : {}} /></Field>
         </div>
-
+        <Field label="Descrição" error={errors.desc}><textarea className="input" placeholder="Descreva a atividade..." value={form.desc} onChange={e => upd("desc", e.target.value)} style={{ minHeight: 110, ...(errors.desc ? { borderColor: G.coral } : {}) }} /></Field>
         <div className="divider" />
-
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-            <div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} />
-            <span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Data & Horário</span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-            <Field label="Data" error={errors.date}>
-              <input className="input" type="text" placeholder="Ex: 20 Mai" value={form.date} onChange={e => upd("date", e.target.value)} style={errors.date ? { borderColor: G.coral } : {}} />
-            </Field>
-            <Field label="Horário" error={errors.time}>
-              <input className="input" type="text" placeholder="Ex: 08h–12h" value={form.time} onChange={e => upd("time", e.target.value)} style={errors.time ? { borderColor: G.coral } : {}} />
-            </Field>
-            <Field label="Duração (horas)" error={errors.hours}>
-              <input className="input" type="number" placeholder="Ex: 4" min="1" max="24" value={form.hours} onChange={e => upd("hours", e.target.value)} style={errors.hours ? { borderColor: G.coral } : {}} />
-            </Field>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <Field label="Data" error={errors.date}><input className="input" type="text" placeholder="Ex: 20 Mai" value={form.date} onChange={e => upd("date", e.target.value)} style={errors.date ? { borderColor: G.coral } : {}} /></Field>
+          <Field label="Horário" error={errors.time}><input className="input" type="text" placeholder="Ex: 08h–12h" value={form.time} onChange={e => upd("time", e.target.value)} style={errors.time ? { borderColor: G.coral } : {}} /></Field>
+          <Field label="Duração (horas)" error={errors.hours}><input className="input" type="number" placeholder="4" min="1" value={form.hours} onChange={e => upd("hours", e.target.value)} style={errors.hours ? { borderColor: G.coral } : {}} /></Field>
         </div>
-
         <div className="divider" />
-
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-            <div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} />
-            <span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Vagas & Perfil</span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16 }}>
-            <Field label="Número de vagas" error={errors.spots}>
-              <input className="input" type="number" placeholder="Ex: 10" min="1" value={form.spots} onChange={e => upd("spots", e.target.value)} style={errors.spots ? { borderColor: G.coral } : {}} />
-            </Field>
-            <Field label="Habilidades úteis (separadas por vírgula)">
-              <input className="input" type="text" placeholder="Ex: Paciência, Comunicação, Empatia" value={form.skills} onChange={e => upd("skills", e.target.value)} />
-            </Field>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16 }}>
+          <Field label="Vagas" error={errors.spots}><input className="input" type="number" placeholder="10" min="1" value={form.spots} onChange={e => upd("spots", e.target.value)} style={errors.spots ? { borderColor: G.coral } : {}} /></Field>
+          <Field label="Habilidades úteis (separadas por vírgula)"><input className="input" type="text" placeholder="Paciência, Comunicação" value={form.skills} onChange={e => upd("skills", e.target.value)} /></Field>
         </div>
       </div>
-
       <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-        <button className="btn-ghost" style={{ flex: 1 }} onClick={() => handleSubmit("draft")}>
-          <Icon name="file-text" size={16} color={G.emerald} />
-          Salvar Rascunho
-        </button>
-        <button className="btn-primary" style={{ flex: 2 }} onClick={() => handleSubmit("active")}>
-          <Icon name="check" size={16} color={G.navy} />
-          Publicar Oportunidade
-        </button>
+        <button className="btn-ghost" style={{ flex: 1 }} onClick={() => handleSubmit("draft")}><Icon name="file-text" size={16} color={G.emerald} />Salvar Rascunho</button>
+        <button className="btn-primary" style={{ flex: 2 }} onClick={() => handleSubmit("active")}><Icon name="check" size={16} color={G.navy} />Publicar Oportunidade</button>
       </div>
-
-      <p style={{ textAlign: "center", fontSize: 12, color: G.slate, marginTop: 12 }}>
-        Rascunhos ficam visíveis apenas para você. Publique para que voluntários possam se inscrever.
-      </p>
     </div>
   );
 };
 
-// ── 6. Inscritos ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// 6. EnrolleesTab
+// ═══════════════════════════════════════════════════════════════════════════════
 const EnrolleesTab = () => {
   const { enrollees, opportunities } = useOng();
   const [filterOp, setFilterOp] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
-
   const filtered = enrollees.filter(e => {
     const matchOp = filterOp === "all" || e.opportunityId === Number(filterOp);
     const matchStatus = filterStatus === "all" || e.status === filterStatus;
     const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase());
     return matchOp && matchStatus && matchSearch;
   });
-
   const statusBadge = { confirmed: "badge-green", pending: "badge-amber", cancelled: "badge-coral" };
   const statusLabel = { confirmed: "Confirmado", pending: "Pendente", cancelled: "Cancelado" };
-
   const getOpTitle = (id) => opportunities.find(o => o.id === id)?.title || "—";
-
-  const stats = [
-    { label: "Total de inscritos", value: enrollees.length, color: G.white },
-    { label: "Confirmados", value: enrollees.filter(e => e.status === "confirmed").length, color: G.emerald },
-    { label: "Pendentes", value: enrollees.filter(e => e.status === "pending").length, color: G.amber },
-    { label: "Check-ins", value: enrollees.filter(e => e.checkedIn).length, color: G.purple },
-  ];
 
   return (
     <div className="fade-up">
@@ -1198,29 +649,23 @@ const EnrolleesTab = () => {
         <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Inscritos</h2>
         <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Gerencie os voluntários inscritos nas suas oportunidades.</p>
       </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-        {stats.map(s => (
-          <div key={s.label} className="stat-card" style={{ padding: "14px 16px" }}>
-            <div className="syne" style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: G.slate, marginTop: 4 }}>{s.label}</div>
+        {[[enrollees.length, "Total", G.white], [enrollees.filter(e => e.status === "confirmed").length, "Confirmados", G.emerald], [enrollees.filter(e => e.status === "pending").length, "Pendentes", G.amber], [enrollees.filter(e => e.checkedIn).length, "Check-ins", G.purple]].map(([v, l, c]) => (
+          <div key={String(l)} className="stat-card" style={{ padding: "14px 16px" }}>
+            <div className="syne" style={{ fontSize: 22, fontWeight: 800, color: c }}>{v}</div>
+            <div style={{ fontSize: 11, color: G.slate, marginTop: 4 }}>{l}</div>
           </div>
         ))}
       </div>
-
       <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative", flex: "1 1 200px" }}>
           <input className="input" type="text" placeholder="Buscar por nome ou e-mail..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 36, height: 40, fontSize: 13 }} />
-          <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-            <Icon name="search" size={15} color={G.slate} />
-          </div>
+          <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><Icon name="search" size={15} color={G.slate} /></div>
         </div>
-
         <select className="input" value={filterOp} onChange={e => setFilterOp(e.target.value)} style={{ flex: "0 0 auto", width: "auto", minWidth: 180, height: 40, fontSize: 13, color: G.white }}>
           <option value="all">Todas as oportunidades</option>
           {opportunities.map(o => <option key={o.id} value={o.id}>{o.title}</option>)}
         </select>
-
         <select className="input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: "0 0 auto", width: "auto", minWidth: 140, height: 40, fontSize: 13, color: G.white }}>
           <option value="all">Todos os status</option>
           <option value="confirmed">Confirmados</option>
@@ -1228,122 +673,60 @@ const EnrolleesTab = () => {
           <option value="cancelled">Cancelados</option>
         </select>
       </div>
-
       {filtered.length === 0 ? (
-        <div className="empty-state">
-          <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhum inscrito encontrado</p>
-          <p style={{ fontSize: 13 }}>Tente ajustar os filtros ou aguarde novas inscrições.</p>
-        </div>
+        <div className="empty-state"><div style={{ fontSize: 40, marginBottom: 12 }}>👥</div><p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhum inscrito encontrado</p><p style={{ fontSize: 13 }}>Tente ajustar os filtros.</p></div>
       ) : (
         <div className="table-wrap">
           <table>
-            <thead>
-              <tr>
-                <th>Voluntário</th>
-                <th>Oportunidade</th>
-                <th>Cidade</th>
-                <th>Inscrito em</th>
-                <th>Status</th>
-                <th>Check-in</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Voluntário</th><th>Oportunidade</th><th>Cidade</th><th>Inscrito em</th><th>Status</th><th>Check-in</th></tr></thead>
             <tbody>
               {filtered.map(e => (
                 <tr key={e.id}>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>
-                        {e.name[0]}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{e.name}</div>
-                        <div style={{ fontSize: 11, color: G.slate }}>{e.email}</div>
-                      </div>
-                    </div>
-                  </td>
+                  <td><div style={{ display: "flex", alignItems: "center", gap: 10 }}><div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>{e.name[0]}</div><div><div style={{ fontSize: 13, fontWeight: 600 }}>{e.name}</div><div style={{ fontSize: 11, color: G.slate }}>{e.email}</div></div></div></td>
                   <td><span style={{ fontSize: 13, color: G.slate }}>{getOpTitle(e.opportunityId)}</span></td>
                   <td><span style={{ fontSize: 13, color: G.slate }}>{e.city}</span></td>
                   <td><span style={{ fontSize: 13, color: G.slate }}>{e.enrolledAt}</span></td>
                   <td><span className={`badge ${statusBadge[e.status]}`}>{statusLabel[e.status]}</span></td>
-                  <td>
-                    {e.checkedIn ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <Icon name="check-circle" size={14} color={G.emerald} />
-                        <span style={{ fontSize: 12, color: G.emerald }}>Presente</span>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: 12, color: G.slate }}>—</span>
-                    )}
-                  </td>
+                  <td>{e.checkedIn ? <div style={{ display: "flex", alignItems: "center", gap: 5 }}><Icon name="check-circle" size={14} color={G.emerald} /><span style={{ fontSize: 12, color: G.emerald }}>Presente</span></div> : <span style={{ fontSize: 12, color: G.slate }}>—</span>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-
-      {filtered.length > 0 && (
-        <p style={{ fontSize: 12, color: G.slate, marginTop: 12, textAlign: "right" }}>
-          Exibindo {filtered.length} de {enrollees.length} inscrito{enrollees.length !== 1 ? "s" : ""}
-        </p>
-      )}
     </div>
   );
 };
 
-// ── 7. Perfil da ONG ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// 7. ProfileTab
+// ═══════════════════════════════════════════════════════════════════════════════
 const ProfileTab = () => {
   const { ong, setOng, showToast } = useOng();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...ong });
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSave = () => {
-    setOng(form);
-    setEditing(false);
-    showToast("Perfil atualizado com sucesso!", "✅");
-  };
-
-  const handleCancel = () => {
-    setForm({ ...ong });
-    setEditing(false);
-  };
+  const handleSave = () => { setOng(form); setEditing(false); showToast("Perfil atualizado!", "✅"); };
+  const handleCancel = () => { setForm({ ...ong }); setEditing(false); };
 
   return (
     <div className="fade-up" style={{ maxWidth: 680 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-        <div>
-          <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Perfil da ONG</h2>
-          <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Informações públicas da sua organização na plataforma.</p>
-        </div>
+        <div><h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Perfil da ONG</h2><p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Informações públicas da sua organização.</p></div>
         {!editing ? (
-          <button className="btn-ghost btn-sm" onClick={() => setEditing(true)}>
-            <Icon name="edit" size={14} color={G.emerald} />
-            Editar
-          </button>
+          <button className="btn-ghost btn-sm" onClick={() => setEditing(true)}><Icon name="edit" size={14} color={G.emerald} />Editar</button>
         ) : (
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn-ghost btn-sm" onClick={handleCancel}>Cancelar</button>
-            <button className="btn-primary btn-sm" onClick={handleSave}>
-              <Icon name="check" size={14} color={G.navy} />
-              Salvar
-            </button>
+            <button className="btn-primary btn-sm" onClick={handleSave}><Icon name="check" size={14} color={G.navy} />Salvar</button>
           </div>
         )}
       </div>
-
       <div className="card-static" style={{ padding: 24, marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
-          <div style={{ width: 72, height: 72, borderRadius: 18, flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
-            🤝
-          </div>
+          <div style={{ width: 72, height: 72, borderRadius: 18, flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🤝</div>
           <div>
-            {editing ? (
-              <input className="input" value={form.name} onChange={e => upd("name", e.target.value)} style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }} />
-            ) : (
-              <h3 className="syne" style={{ fontSize: 20, fontWeight: 800 }}>{ong.name}</h3>
-            )}
+            {editing ? <input className="input" value={form.name} onChange={e => upd("name", e.target.value)} style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }} /> : <h3 className="syne" style={{ fontSize: 20, fontWeight: 800 }}>{ong.name}</h3>}
             <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
               <span className="badge badge-green">{ong.category}</span>
               <span className="badge badge-slate">{ong.city}, {ong.state}</span>
@@ -1351,112 +734,26 @@ const ProfileTab = () => {
             </div>
           </div>
         </div>
-
         <div className="form-group">
           <label className="label">Descrição</label>
-          {editing ? (
-            <textarea className="input" value={form.desc} onChange={e => upd("desc", e.target.value)} style={{ minHeight: 90 }} />
-          ) : (
-            <p style={{ fontSize: 14, color: G.slate, lineHeight: 1.6 }}>{ong.desc}</p>
-          )}
+          {editing ? <textarea className="input" value={form.desc} onChange={e => upd("desc", e.target.value)} style={{ minHeight: 90 }} /> : <p style={{ fontSize: 14, color: G.slate, lineHeight: 1.6 }}>{ong.desc}</p>}
         </div>
       </div>
-
       <div className="card-static" style={{ padding: 24, marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} />
-          <span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Dados Institucionais</span>
-        </div>
-
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} /><span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Contato</span></div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {[
-            { key: "cnpj", label: "CNPJ", icon: "file-text", type: "text" },
-            { key: "founded", label: "Fundada em", icon: "calendar", type: "text" },
-          ].map(({ key, label, icon, type }) => (
+          {[["email", "E-mail", "email"], ["phone", "Telefone", "tel"], ["website", "Website", "url"], ["city", "Cidade", "text"]].map(([key, label, type]) => (
             <div key={key} className="form-group">
               <label className="label">{label}</label>
-              {editing ? (
-                <input className="input" type={type} value={form[key]} onChange={e => upd(key, e.target.value)} />
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: G.white }}>
-                  <Icon name={icon} size={15} color={G.slate} />
-                  {ong[key]}
-                </div>
-              )}
-            </div>
-          ))}
-
-          <div className="form-group">
-            <label className="label">Categoria</label>
-            {editing ? (
-              <select className="input" value={form.category} onChange={e => upd("category", e.target.value)}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-                <Icon name="star" size={15} color={G.slate} />
-                {ong.category}
-              </div>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label className="label">Estado</label>
-            {editing ? (
-              <select className="input" value={form.state} onChange={e => upd("state", e.target.value)}>
-                {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-                <Icon name="map" size={15} color={G.slate} />
-                {ong.city}, {ong.state}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="card-static" style={{ padding: 24, marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} />
-          <span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Contato</span>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {[
-            { key: "email", label: "E-mail", icon: "mail", type: "email" },
-            { key: "phone", label: "Telefone", icon: "phone", type: "tel" },
-            { key: "website", label: "Website", icon: "globe", type: "url" },
-            { key: "city", label: "Cidade", icon: "location", type: "text" },
-          ].map(({ key, label, icon, type }) => (
-            <div key={key} className="form-group">
-              <label className="label">{label}</label>
-              {editing ? (
-                <input className="input" type={type} value={form[key]} onChange={e => upd(key, e.target.value)} />
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: G.white }}>
-                  <Icon name={icon} size={15} color={G.slate} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {ong[key] || "—"}
-                  </span>
-                </div>
-              )}
+              {editing ? <input className="input" type={type} value={form[key]} onChange={e => upd(key, e.target.value)} /> : <div style={{ fontSize: 14, color: G.white }}>{ong[key] || "—"}</div>}
             </div>
           ))}
         </div>
       </div>
-
       <div className="card-static" style={{ padding: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} />
-          <span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Impacto na Plataforma</span>
-        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} /><span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Impacto na Plataforma</span></div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
-          {[
-            [ong.volunteers, "Voluntários mobilizados"],
-            [ong.hoursImpacted + "h", "Horas de impacto"],
-            [ong.actionsCompleted, "Ações concluídas"],
-          ].map(([v, l], i) => (
+          {[[ong.volunteers, "Voluntários"], [ong.hoursImpacted + "h", "Horas"], [ong.actionsCompleted, "Ações"]].map(([v, l], i) => (
             <div key={String(l)} style={{ textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none", padding: "0 16px" }}>
               <div className="syne" style={{ fontSize: 26, fontWeight: 800, color: G.emerald }}>{v}</div>
               <div style={{ fontSize: 12, color: G.slate, marginTop: 4 }}>{l}</div>
@@ -1468,10 +765,11 @@ const ProfileTab = () => {
   );
 };
 
-// ── Sidebar ──
+// ═══════════════════════════════════════════════════════════════════════════════
+// SIDEBAR + TOPNAV + PORTAL SHELL
+// ═══════════════════════════════════════════════════════════════════════════════
 const Sidebar = ({ mobileOpen, onClose }) => {
   const { activeTab, setActiveTab, ong, setScreen } = useOng();
-
   const NAV_ITEMS = [
     { id: "dashboard", icon: "bar-chart", label: "Dashboard" },
     { id: "opportunities", icon: "calendar", label: "Oportunidades" },
@@ -1479,50 +777,38 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     { id: "enrollees", icon: "users", label: "Inscritos" },
     { id: "profile", icon: "building", label: "Perfil da ONG" },
   ];
+  const handleNav = (id) => { setActiveTab(id); onClose?.(); };
 
-  const handleNav = (id) => {
-    setActiveTab(id);
-    onClose?.();
+  // logout chama o backend antes de mudar de tela
+  const handleLogout = async () => {
+    await logout();
+    setScreen("login");
   };
 
   return (
     <>
-      {mobileOpen && (
-        <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 89, background: "rgba(13,31,45,.6)", backdropFilter: "blur(4px)" }} />
-      )}
-
+      {mobileOpen && <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 89, background: "rgba(13,31,45,.6)", backdropFilter: "blur(4px)" }} />}
       <aside className={`sidebar${mobileOpen ? " mobile-open" : ""}`}>
         <div style={{ padding: "0 20px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", marginBottom: 8 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10 }}>
-            🤝
-          </div>
-          <div className="syne" style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3 }}>{ong.name}</div>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10 }}>🤝</div>
+          <div className="syne" style={{ fontSize: 13, fontWeight: 700 }}>{ong.name}</div>
           <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>{ong.category}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: G.emerald }} />
             <span style={{ fontSize: 11, color: G.emerald }}>Ativa</span>
           </div>
         </div>
-
         <nav style={{ flex: 1 }}>
           {NAV_ITEMS.map(item => (
-            <button
-              key={item.id}
-              className={`sidebar-item${activeTab === item.id ? " active" : ""}`}
-              onClick={() => handleNav(item.id)}
-              style={{ width: "100%", textAlign: "left" }}
-            >
+            <button key={item.id} className={`sidebar-item${activeTab === item.id ? " active" : ""}`} onClick={() => handleNav(item.id)} style={{ width: "100%", textAlign: "left" }}>
               <Icon name={item.icon} size={17} color={activeTab === item.id ? G.emerald : G.slate} />
               {item.label}
-              {item.id === "create" && (
-                <span style={{ marginLeft: "auto", width: 18, height: 18, borderRadius: "50%", background: G.emerald, color: G.navy, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>+</span>
-              )}
+              {item.id === "create" && <span style={{ marginLeft: "auto", width: 18, height: 18, borderRadius: "50%", background: G.emerald, color: G.navy, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>+</span>}
             </button>
           ))}
         </nav>
-
         <div style={{ padding: "16px 0", borderTop: "1px solid rgba(255,255,255,.06)" }}>
-          <button className="sidebar-item" style={{ width: "100%", textAlign: "left" }} onClick={() => setScreen("login")}>
+          <button className="sidebar-item" style={{ width: "100%", textAlign: "left" }} onClick={handleLogout}>
             <Icon name="logout" size={17} color={G.slate} />
             Sair
           </button>
@@ -1532,44 +818,26 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   );
 };
 
-// ── TopNav ──
 const TopNav = ({ onMenuToggle }) => {
   const { activeTab, ong, setActiveTab } = useOng();
-
-  const TAB_LABELS = {
-    dashboard: "Dashboard",
-    opportunities: "Minhas Oportunidades",
-    create: "Nova Oportunidade",
-    enrollees: "Inscritos",
-    profile: "Perfil da ONG",
-  };
-
+  const TAB_LABELS = { dashboard: "Dashboard", opportunities: "Minhas Oportunidades", create: "Nova Oportunidade", enrollees: "Inscritos", profile: "Perfil da ONG" };
   return (
     <header className="top-nav">
-      <button onClick={onMenuToggle} style={{ background: "none", border: "none", cursor: "pointer", color: G.white, display: "flex", alignItems: "center", padding: 4 }} className="mobile-menu-btn">
+      <button onClick={onMenuToggle} style={{ background: "none", border: "none", cursor: "pointer", color: G.white, display: "flex", alignItems: "center", padding: 4 }}>
         <Icon name="menu" size={20} />
       </button>
-
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
-          🌱
-        </div>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🌱</div>
         <span className="syne" style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.01em" }}>Kindly</span>
         <span style={{ color: G.slate, fontSize: 13 }}>/ Portal ONG</span>
       </div>
-
       <div style={{ flex: 1, paddingLeft: 16 }}>
-        <span className="syne" style={{ fontSize: 14, fontWeight: 700, color: G.white }}>
-          {TAB_LABELS[activeTab] || ""}
-        </span>
+        <span className="syne" style={{ fontSize: 14, fontWeight: 700 }}>{TAB_LABELS[activeTab] || ""}</span>
       </div>
-
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button className="btn-primary btn-sm" onClick={() => setActiveTab("create")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", fontSize: 13 }}>
-          <Icon name="plus" size={14} color={G.navy} />
-          Nova Oportunidade
+        <button className="btn-primary btn-sm" onClick={() => setActiveTab("create")} style={{ padding: "8px 14px", fontSize: 13 }}>
+          <Icon name="plus" size={14} color={G.navy} />Nova Oportunidade
         </button>
-
         <div style={{ width: 34, height: 34, borderRadius: "50%", background: `linear-gradient(135deg, ${G.emerald}, ${G.purple})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: G.navy, cursor: "pointer", flexShrink: 0 }} title={ong.name}>
           {ong.name[0]}
         </div>
@@ -1578,11 +846,9 @@ const TopNav = ({ onMenuToggle }) => {
   );
 };
 
-// ── Portal Shell ──
 const PortalShell = () => {
   const { activeTab } = useOng();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const renderTab = () => {
     switch (activeTab) {
       case "dashboard": return <DashboardTab />;
@@ -1593,14 +859,11 @@ const PortalShell = () => {
       default: return <DashboardTab />;
     }
   };
-
   return (
     <>
       <TopNav onMenuToggle={() => setMobileMenuOpen(o => !o)} />
       <Sidebar mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
-      <main className="main-content">
-        {renderTab()}
-      </main>
+      <main className="main-content">{renderTab()}</main>
     </>
   );
 };
@@ -1608,10 +871,8 @@ const PortalShell = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // APP
 // ═══════════════════════════════════════════════════════════════════════════════
-
 function AppContent() {
   const { screen, toast, showToast } = useOng();
-
   return (
     <>
       <style>{css}</style>
