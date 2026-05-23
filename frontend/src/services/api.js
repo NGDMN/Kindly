@@ -63,4 +63,81 @@ export function getUsuarioDoToken() {
     }
 }
 
+// --- Endpoints de oportunidades ---
+
+export async function listarOportunidades() {
+    const { data } = await api.get("/oportunidades");
+    return data;
+}
+
+export async function criarOportunidade(payload) {
+    const { data } = await api.post("/oportunidades", payload);
+    return data;
+}
+
+export async function atualizarOportunidade(id, payload) {
+    const { data } = await api.put(`/oportunidades/${id}`, payload);
+    return data;
+}
+
+// --- Endpoints de inscrições ---
+
+export async function inscreverEmOportunidade(idOportunidade) {
+    const { data } = await api.post("/inscricoes", { idOportunidade });
+    return data;
+}
+
+export async function listarMinhasInscricoes() {
+    const { data } = await api.get("/inscricoes/minhas");
+    return data;
+}
+
+export async function listarInscricoesDaOportunidade(idOportunidade) {
+    const { data } = await api.get(`/inscricoes/oportunidade/${idOportunidade}`);
+    return data;
+}
+
+export async function cancelarInscricao(idInscricao) {
+    const { data } = await api.delete(`/inscricoes/${idInscricao}`);
+    return data;
+}
+
+// --- Endpoints de usuário logado ---
+
+export async function obterMeusDados() {
+    const { data } = await api.get("/me");
+    return data;
+}
+
+export async function obterRanking() {
+    const { data } = await api.get("/usuarios/ranking");
+    return data;
+}
+
+// --- Endpoints de categorias ---
+
+export async function listarCategorias() {
+    const { data } = await api.get("/categorias");
+    return data;
+}
+
+// --- Endpoints de ONG ---
+
+export async function listarMinhasOngs() {
+    const { data } = await api.get("/ongs/minhas");
+    return data;
+}
+
+export async function atualizarOng(id, payload) {
+    const { data } = await api.put(`/ongs/${id}`, payload);
+    return data;
+}
+
+// --- Alteração de senha ---
+
+export async function alterarSenha(senhaAtual, senhaNova) {
+    const { data } = await api.put("/auth/senha", { senhaAtual, senhaNova });
+    return data;
+}
+
 export default api;
