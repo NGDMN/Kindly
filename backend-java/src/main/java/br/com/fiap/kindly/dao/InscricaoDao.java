@@ -64,4 +64,9 @@ public class InscricaoDao {
         String sql = "UPDATE TB_Inscricao SET id_status_inscricao = ? WHERE id = ?";
         jdbc.update(sql, novoStatus.idBanco, id);
     }
+
+    public void cancelar(Long id) {
+        String sql = "UPDATE TB_Inscricao SET id_status_inscricao = 4 WHERE id = ?";
+        jdbc.update(sql, id);
+    }
 }

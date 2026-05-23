@@ -3,7 +3,8 @@ package br.com.fiap.kindly.model;
 public enum StatusInscricao {
     Inscrito(1),
     Realizado(2),
-    Expirado(3);
+    Expirado(3),
+    Cancelado(4);
 
     public final int idBanco;
 
