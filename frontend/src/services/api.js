@@ -52,4 +52,15 @@ export async function refresh() {
     return data;
 }
 
+export function getUsuarioDoToken() {
+    const token = getAccessToken();
+    if (!token) return null;
+    try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.sub; // sub = username definido no JwtUtil.gerarToken()
+    } catch {
+        return null;
+    }
+}
+
 export default api;

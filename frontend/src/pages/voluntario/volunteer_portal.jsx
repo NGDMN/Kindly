@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { login, registrar, logout } from "../../services/api";
+import { login, registrar, logout, getUsuarioDoToken } from "../../services/api";
 
 // ── Palette & global styles ──────────────────────────────────────────────────
 const G = {
@@ -325,14 +325,12 @@ const OPPORTUNITIES = [
 ];
 
 const ENGINES = [
-  { id: "impact", icon: "🌍", title: "Impacto Social", desc: "Quero ver o mundo melhorar de verdade" },
-  { id: "skills", icon: "🚀", title: "Desenvolver Habilidades", desc: "Aprender e crescer enquanto ajudo" },
-  { id: "community", icon: "🤝", title: "Comunidade", desc: "Conectar-me com pessoas incríveis" },
-  { id: "purpose", icon: "✨", title: "Propósito Pessoal", desc: "Sentir que faço parte de algo maior" },
+  { id: "C", icon: "🏆", title: "Competição", desc: "Quero subir no ranking e superar meus amigos" },
+  { id: "K", icon: "🐼", title: "Kibo", desc: "Quero evoluir meu avatar cuidando de causas" },
+  { id: "A", icon: "⚡", title: "Ambos", desc: "Quero competir com amigos e cuidar do Kibo ao mesmo tempo" },
 ];
 
-// Motor escolhido no onboarding → código CHAR(1) esperado pelo backend
-const MOTOR_CODIGO = { impact: "C", skills: "A", community: "K", purpose: "A" };
+const MOTOR_CODIGO = { C: "C", K: "K", A: "A" };
 
 // ── 1. LoginScreen ────────────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin, onRegister }) => {
@@ -449,9 +447,9 @@ const RegisterScreen = ({ onBack, onDone }) => {
         cpf: form.cpf.replace(/\D/g, ""),
         usuario: form.usuario,
         senha: form.senha,
-        motor: MOTOR_CODIGO[form.motor] ?? null,
+        motor: form.motor || null,
       });
-      onDone();
+      onDone(form.nome, form.motor);
     } catch (e) {
       const msg = e?.response?.data;
       setErro(typeof msg === "string" ? msg : "Erro ao criar conta. Verifique os dados.");
@@ -667,7 +665,7 @@ const AccountTab = ({ user, onLogout }) => {
         <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>{user.email}</p>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, background: "rgba(0,200,150,.08)", padding: "6px 14px", borderRadius: 20, border: `1px solid rgba(0,200,150,.2)` }}>
           <span style={{ fontSize: 14 }}>💡</span>
-          <span style={{ fontSize: 13, color: G.emerald, fontWeight: 600 }}>Motor: {ENGINES.find(e => e.id === user.engine)?.title || "Impacto Social"}</span>
+          <span style={{ fontSize: 13, color: G.emerald, fontWeight: 600 }}>Motor: {ENGINES.find(e => e.id === user.engine)?.title || "Não definido"}</span>
         </div>
       </div>
 
@@ -917,9 +915,17 @@ export default function App() {
 
   const showToast = (msg, icon) => setToast({ msg, icon });
 
-  const onLogin = () => setScreen("app");
+  const onLogin = () => {
+    const username = getUsuarioDoToken();
+    setUser(u => ({ ...u, name: username || "Voluntário" }));
+    setScreen("app");
+  };
   const onRegister = () => setScreen("register");
-  const onRegDone = () => { setScreen("app"); showToast("Conta criada com sucesso!", "🎉"); };
+  const onRegDone = (nome, motor) => {
+    setUser(u => ({ ...u, name: nome, engine: motor || "C" }));
+    setScreen("app");
+    showToast("Conta criada com sucesso!", "🎉");
+  };
 
   // logout chama o backend antes de limpar o estado local
   const onLogout = async () => {

@@ -589,7 +589,11 @@ const CreateOpportunityTab = () => {
   };
 
   const Field = ({ label, error, children }) => (
-    <div className="form-group"><label className="label">{label}</label>{children}{error && <span style={{ fontSize: 11, color: G.coral, marginTop: 4, display: "block" }}>{error}</span>}</div>
+    <div className="form-group">
+      <label className="label">{label}</label>
+      {children}
+      {error && <span style={{ fontSize: 11, color: G.coral, marginTop: 4, display: "block" }}>{error}</span>}
+    </div>
   );
 
   return (
