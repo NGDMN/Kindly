@@ -92,4 +92,14 @@ public class UsuarioDao {
         String sql = "UPDATE TB_Usuario SET id_status = 3 WHERE id = ?";
         jdbc.update(sql, id);
     }
+
+    public List<Usuario> listarTopRanking(int limite) {
+        String sql = """
+                SELECT * FROM TB_Usuario
+                WHERE id_status = 1
+                ORDER BY pontuacao_acumulada DESC
+                FETCH FIRST ? ROWS ONLY
+                """;
+        return jdbc.query(sql, mapper, limite);
+    }
 }

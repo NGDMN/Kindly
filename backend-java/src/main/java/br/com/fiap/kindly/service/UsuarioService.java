@@ -1,25 +1,41 @@
 package br.com.fiap.kindly.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.fiap.kindly.dao.OngDao;
 import br.com.fiap.kindly.dao.UsuarioDao;
+import br.com.fiap.kindly.dao.UsuarioOngDao;
+import br.com.fiap.kindly.dto.MeResponseDTO;
+import br.com.fiap.kindly.dto.RankingItemDTO;
 import br.com.fiap.kindly.model.Motor;
+import br.com.fiap.kindly.model.ONG;
 import br.com.fiap.kindly.model.Status;
 import br.com.fiap.kindly.model.Usuario;
+import br.com.fiap.kindly.model.UsuarioOng;
 
 @Service
 public class UsuarioService {
 
     private final UsuarioDao usuarioDao;
+    private final UsuarioOngDao usuarioOngDao;
+    private final OngDao ongDao;
+    private final StreakService streakService;
 
     @Autowired
-    public UsuarioService(UsuarioDao usuarioDao) {
+    public UsuarioService(UsuarioDao usuarioDao,
+            UsuarioOngDao usuarioOngDao,
+            OngDao ongDao,
+            StreakService streakService) {
         this.usuarioDao = usuarioDao;
+        this.usuarioOngDao = usuarioOngDao;
+        this.ongDao = ongDao;
+        this.streakService = streakService;
     }
 
     public void cadastrar(String nome, String cpf, String usuario, String senha, Motor motor) {
@@ -80,6 +96,53 @@ public class UsuarioService {
     public void deletar(Long id) {
         buscarPorId(id); // garante que existe antes de deletar
         usuarioDao.deletar(id);
+    }
+
+    public MeResponseDTO obterMeusDados(Long idUsuario) {
+        Usuario u = buscarPorId(idUsuario);
+
+        List<MeResponseDTO.OngVinculoDTO> vinculos = new ArrayList<>();
+        List<UsuarioOng> vinculosUsuario = usuarioOngDao.listarPorUsuario(idUsuario);
+
+        for (UsuarioOng vinculo : vinculosUsuario) {
+            Optional<ONG> ongOpt = ongDao.buscarPorId(vinculo.getIdOng());
+            if (ongOpt.isPresent()) {
+                ONG ong = ongOpt.get();
+                vinculos.add(new MeResponseDTO.OngVinculoDTO(
+                        ong.getId(),
+                        ong.getNomeFantasia(),
+                        vinculo.getRole() != null ? vinculo.getRole().name() : null
+                ));
+            }
+        }
+
+        int streakAtual = streakService.buscarTotalAtual(idUsuario);
+
+        MeResponseDTO dto = new MeResponseDTO();
+        dto.setId(u.getId());
+        dto.setNome(u.getNome());
+        dto.setUsuario(u.getUsuario());
+        dto.setMotor(u.getMotor() != null ? u.getMotor().name() : null);
+        dto.setPontuacaoAcumulada(u.getPontuacaoAcumulada());
+        dto.setStreakAtual(streakAtual);
+        dto.setOngsVinculadas(vinculos);
+        return dto;
+    }
+
+    public List<RankingItemDTO> obterRanking() {
+        List<Usuario> top = usuarioDao.listarTopRanking(10);
+        List<RankingItemDTO> ranking = new ArrayList<>();
+        int posicao = 1;
+        for (Usuario u : top) {
+            RankingItemDTO item = new RankingItemDTO();
+            item.setPosicao(posicao++);
+            item.setIdUsuario(u.getId());
+            item.setNome(u.getNome());
+            item.setUsuario(u.getUsuario());
+            item.setPontuacaoAcumulada(u.getPontuacaoAcumulada());
+            ranking.add(item);
+        }
+        return ranking;
     }
 
     private void validarCadastro(String nome, String cpf, String usuario, String senha) {

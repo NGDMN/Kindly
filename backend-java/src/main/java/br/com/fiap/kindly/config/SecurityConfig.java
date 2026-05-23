@@ -53,11 +53,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                // 1. Aplica o CORS usando a configuração do Bean corsConfigurationSource
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // 2. Desabilita o CSRF, já que usamos autenticação STATELESS via JWT
                 .csrf(csrf -> csrf.disable())
+                // 3. Define a política de sessão como STATELESS
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // 4. Configura as regras de autorização de rotas
                 .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**", "/categorias/**").permitAll()
+                // Garante que o método OPTIONS (Pre-flight) seja aceito de forma pública para qualquer rota 
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(
+                        "/auth/register",
+                        "/auth/login",
+                        "/auth/refresh",
+                        "/auth/logout",
+                        "/categorias/**"
+                ).permitAll()
                 .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
