@@ -1,13 +1,20 @@
 package br.com.fiap.kindly.controller;
 
-import br.com.fiap.kindly.dto.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.fiap.kindly.dto.AlterarSenhaRequest;
+import br.com.fiap.kindly.dto.AuthResponse;
+import br.com.fiap.kindly.dto.LoginRequest;
+import br.com.fiap.kindly.dto.RefreshTokenRequest;
+import br.com.fiap.kindly.dto.RegisterRequest;
+import br.com.fiap.kindly.security.UserDetailsImpl;
 import br.com.fiap.kindly.service.AuthService;
 
 @RestController
@@ -54,5 +61,16 @@ public class AuthController {
     public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest req) {
         authService.logout(req.getRefreshToken());
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/senha")
+    public ResponseEntity<?> alterarSenha(@AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestBody AlterarSenhaRequest req) {
+        try {
+            authService.alterarSenha(principal.getId(), req.getSenhaAtual(), req.getSenhaNova());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 }

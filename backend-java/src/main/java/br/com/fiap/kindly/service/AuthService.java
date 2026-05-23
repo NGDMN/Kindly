@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import br.com.fiap.kindly.model.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,6 +16,9 @@ import br.com.fiap.kindly.dao.UsuarioDao;
 import br.com.fiap.kindly.dto.AuthResponse;
 import br.com.fiap.kindly.dto.LoginRequest;
 import br.com.fiap.kindly.dto.RegisterRequest;
+import br.com.fiap.kindly.model.Motor;
+import br.com.fiap.kindly.model.RefreshToken;
+import br.com.fiap.kindly.model.Usuario;
 import br.com.fiap.kindly.security.JwtUtil;
 import br.com.fiap.kindly.security.UserDetailsImpl;
 
@@ -109,5 +111,21 @@ public class AuthService {
         rt.setExpiracao(Instant.now().plus(refreshExpirationDays, ChronoUnit.DAYS));
         refreshTokenDao.inserir(rt);
         return rt.getToken();
+    }
+
+    public void alterarSenha(Long idUsuario, String senhaAtual, String senhaNova) {
+        if (senhaNova == null || senhaNova.length() < 6) {
+            throw new IllegalArgumentException("Nova senha deve ter ao menos 6 caracteres.");
+        }
+
+        Usuario u = usuarioDao.buscarPorId(idUsuario)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
+
+        if (!passwordEncoder.matches(senhaAtual, u.getSenha())) {
+            throw new IllegalArgumentException("Senha atual incorreta.");
+        }
+
+        u.setSenha(passwordEncoder.encode(senhaNova));
+        usuarioDao.atualizar(u);
     }
 }
