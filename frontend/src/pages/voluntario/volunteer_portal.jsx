@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
-import { login, registrar, logout, getUsuarioDoToken } from "../../services/api";
+import {
+  login,
+  registrar,
+  logout,
+  obterMeusDados,
+  listarOportunidades,
+  listarCategorias,
+  inscreverEmOportunidade,
+  listarMinhasInscricoes,
+  cancelarInscricao,
+  obterRanking,
+  alterarSenha,
+} from "../../services/api";
 
 // ── Palette & global styles ──────────────────────────────────────────────────
 const G = {
@@ -317,12 +329,6 @@ const Blobs = () => (
 );
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-const OPPORTUNITIES = [
-  { id: 1, title: "Tutoria em Matemática", org: "Instituto Futuro", category: "Educação", date: "10 Mai", time: "14h–16h", location: "São Paulo, SP", hours: 2, spots: 5, badge: "green", desc: "Ajude estudantes do ensino médio a superarem dificuldades em matemática. Experiência prévia em ensino é um diferencial.", skills: ["Paciência", "Matemática", "Comunicação"] },
-  { id: 2, title: "Distribuição de Refeições", org: "Mão Amiga ONG", category: "Social", date: "12 Mai", time: "08h–12h", location: "Centro, SP", hours: 4, spots: 12, badge: "amber", desc: "Participe da distribuição de marmitas para pessoas em situação de rua. Importante e urgente!", skills: ["Trabalho em equipe", "Empatia"] },
-  { id: 3, title: "Limpeza de Praia", org: "Oceano Vivo", category: "Meio Ambiente", date: "17 Mai", time: "07h–10h", location: "Santos, SP", hours: 3, spots: 20, badge: "green", desc: "Mutirão de limpeza da orla da Praia Grande. Traga protetor solar e luvas (fornecemos sacos).", skills: ["Consciência ambiental"] },
-  { id: 4, title: "Visita a Idosos", org: "Lar Esperança", category: "Saúde", date: "15 Mai", time: "10h–12h", location: "Pinheiros, SP", hours: 2, spots: 6, badge: "purple", desc: "Faça companhia a idosos em asilo. Leve boa vontade, histórias e um sorriso.", skills: ["Empatia", "Comunicação", "Escuta ativa"] },
-];
 
 const ENGINES = [
   { id: "C", icon: "🏆", title: "Competição", desc: "Quero subir no ranking e superar meus amigos" },
@@ -330,7 +336,6 @@ const ENGINES = [
   { id: "A", icon: "⚡", title: "Ambos", desc: "Quero competir com amigos e cuidar do Kibo ao mesmo tempo" },
 ];
 
-const MOTOR_CODIGO = { C: "C", K: "K", A: "A" };
 
 // ── 1. LoginScreen ────────────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin, onRegister }) => {
@@ -548,8 +553,53 @@ const RegisterScreen = ({ onBack, onDone }) => {
 // ── 3. HomeTab ────────────────────────────────────────────────────────────────
 const HomeTab = ({ user, onOpportunity }) => {
   const [filter, setFilter] = useState("Todos");
-  const cats = ["Todos", "Educação", "Social", "Meio Ambiente", "Saúde"];
-  const filtered = filter === "Todos" ? OPPORTUNITIES : OPPORTUNITIES.filter(o => o.category === filter);
+  const [oportunidades, setOportunidades] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+    Promise.all([listarOportunidades(), listarCategorias()])
+      .then(([ops, cats]) => {
+        if (!ativo) return;
+        setOportunidades(ops);
+        setCategorias(cats);
+        setCarregando(false);
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setErro(true);
+        setCarregando(false);
+      });
+    return () => { ativo = false; };
+  }, []);
+
+  const nomesCategorias = ["Todos", ...categorias.map(c => c.nome)];
+  const filtradas = filter === "Todos"
+    ? oportunidades
+    : oportunidades.filter(op => op.nomeCategoria === filter);
+
+  if (carregando) {
+    return (
+      <div className="page-full">
+        <div style={{ textAlign: "center", padding: "60px 20px", color: G.slate }}>
+          Carregando oportunidades…
+        </div>
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div className="page-full">
+        <div style={{ textAlign: "center", padding: "60px 20px", color: G.coral }}>
+          Não foi possível carregar as oportunidades.<br />
+          <span style={{ color: G.slate, fontSize: 13 }}>Tente recarregar a página.</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-full">
@@ -571,7 +621,7 @@ const HomeTab = ({ user, onOpportunity }) => {
       </div>
 
       <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 20, paddingBottom: 4 }} className="fade-up">
-        {cats.map(c => (
+        {nomesCategorias.map(c => (
           <button key={c} onClick={() => setFilter(c)} style={{
             background: filter === c ? G.emerald : "rgba(255,255,255,.05)",
             color: filter === c ? G.navy : G.slate,
@@ -582,25 +632,38 @@ const HomeTab = ({ user, onOpportunity }) => {
         ))}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {filtered.map((op, i) => (
-          <div key={op.id} className="card fade-up" style={{ padding: 20, cursor: "pointer", animationDelay: `${.08 * i}s` }} onClick={() => onOpportunity(op)}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-              <span className={`badge badge-${op.badge}`}>{op.category}</span>
-              <span style={{ fontSize: 12, color: G.slate }}>{op.spots} vagas</span>
-            </div>
-            <h3 className="syne" style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{op.title}</h3>
-            <p style={{ fontSize: 13, color: G.slate, marginBottom: 14 }}>{op.org}</p>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-              {[["calendar", op.date], ["clock", op.time], ["map", op.location]].map(([ic, val]) => (
-                <div key={ic} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}>
-                  <Icon name={ic} size={13} color={G.slate} /> {val}
+      {filtradas.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: G.slate, fontSize: 14 }}>
+          Nenhuma oportunidade nesta categoria ainda.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {filtradas.map((op, i) => (
+            <div key={op.id} className="card fade-up" style={{ padding: 20, cursor: "pointer", animationDelay: `${.08 * i}s` }} onClick={() => onOpportunity(op)}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <span className="badge badge-green">{op.nomeCategoria}</span>
+                <span style={{ fontSize: 12, color: G.slate }}>{op.vagasTotal - (op.vagasPresente || 0)} vagas</span>
+              </div>
+              <h3 className="syne" style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{op.titulo}</h3>
+              <p style={{ fontSize: 13, color: G.slate, marginBottom: 14 }}>{op.nomeOng}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}>
+                    <Icon name="calendar" size={13} color={G.slate} />
+                    {op.dataEvento ? new Date(op.dataEvento).toLocaleDateString("pt-BR") : "—"}
+                  </div>
                 </div>
-              ))}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,200,150,.1)", padding: "4px 10px", borderRadius: 12 }}>
+                  <span style={{ fontSize: 11, color: G.slate }}>🏆</span>
+                  <span className="syne" style={{ fontSize: 13, fontWeight: 700, color: G.emerald }}>
+                    {Math.round(Number(op.pontuacao) || 0)} pts
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -608,39 +671,62 @@ const HomeTab = ({ user, onOpportunity }) => {
 // ── 4. OpportunityModal ───────────────────────────────────────────────────────
 const OpportunityModal = ({ op, onClose, onConfirm }) => {
   const [enrolled, setEnrolled] = useState(false);
-  const confirm = () => { setEnrolled(true); setTimeout(() => { onConfirm(op); onClose(); }, 1200); };
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const confirm = async () => {
+    setEnviando(true);
+    setErro("");
+    try {
+      await inscreverEmOportunidade(op.id);
+      setEnrolled(true);
+      setTimeout(() => { onConfirm(op); onClose(); }, 1200);
+    } catch (e) {
+      const msg = e?.response?.data;
+      setErro(typeof msg === "string" ? msg : "Não foi possível concluir a inscrição.");
+      setEnviando(false);
+    }
+  };
+
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <span className={`badge badge-${op.badge}`}>{op.category}</span>
+          <span className="badge badge-green">{op.nomeCategoria}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", color: G.slate, cursor: "pointer" }}><Icon name="x" size={20} /></button>
         </div>
-        <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{op.title}</h2>
-        <p style={{ color: G.emerald, fontSize: 14, fontWeight: 600, marginBottom: 16 }}>{op.org}</p>
-        <p style={{ color: G.slate, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{op.desc}</p>
+        <h2 className="syne" style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{op.titulo}</h2>
+        <p style={{ color: G.emerald, fontSize: 14, fontWeight: 600, marginBottom: 16 }}>{op.nomeOng}</p>
+        <p style={{ color: G.slate, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{op.descricao}</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-          {[["📅", op.date], ["⏰", op.time], ["📍", op.location], ["⏳", `${op.hours}h de dedicação`]].map(([ic, v]) => (
-            <div key={v} style={{ background: "rgba(255,255,255,.04)", borderRadius: 10, padding: "10px 12px", fontSize: 13 }}>
-              <span style={{ marginRight: 6 }}>{ic}</span>{v}
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 12, color: G.slate, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".06em", fontWeight: 600 }}>Habilidades úteis</p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {op.skills.map(s => <span key={s} className="badge badge-green">{s}</span>)}
+          <div style={{ background: "rgba(255,255,255,.04)", borderRadius: 10, padding: "10px 12px", fontSize: 13 }}>
+            <span style={{ marginRight: 6 }}>📅</span>
+            {op.dataEvento ? new Date(op.dataEvento).toLocaleDateString("pt-BR") : "—"}
+          </div>
+          <div style={{ background: "rgba(255,255,255,.04)", borderRadius: 10, padding: "10px 12px", fontSize: 13 }}>
+            <span style={{ marginRight: 6 }}>👥</span>
+            {op.vagasTotal - (op.vagasPresente || 0)} vagas restantes
+          </div>
+          <div style={{ background: "rgba(255,255,255,.04)", borderRadius: 10, padding: "10px 12px", fontSize: 13, gridColumn: "1 / -1" }}>
+            <span style={{ marginRight: 6 }}>🏆</span>
+            <span style={{ color: G.emerald, fontWeight: 700 }}>
+              {Math.round(Number(op.pontuacao) || 0)} pontos
+            </span>
+            {" "}por participar
           </div>
         </div>
+
+        {erro && <p style={{ fontSize: 13, color: G.coral, marginBottom: 12 }}>{erro}</p>}
 
         {enrolled
           ? <div style={{ textAlign: "center", padding: "20px 0" }}>
             <div style={{ fontSize: 40 }}>🎉</div>
             <p className="syne" style={{ fontWeight: 700, marginTop: 8 }}>Inscrição confirmada!</p>
           </div>
-          : <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={confirm}>Quero me inscrever!</button>
+          : <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={confirm} disabled={enviando}>
+            {enviando ? "Confirmando…" : "Quero me inscrever!"}
+          </button>
         }
       </div>
     </div>
@@ -648,13 +734,7 @@ const OpportunityModal = ({ op, onClose, onConfirm }) => {
 };
 
 // ── 5. AccountTab ─────────────────────────────────────────────────────────────
-const AccountTab = ({ user, onLogout }) => {
-  const achievements = [
-    { icon: "🌱", label: "Primeiro Passo", done: true },
-    { icon: "🔥", label: "7 dias", done: true },
-    { icon: "🏆", label: "30 dias", done: false },
-    { icon: "⭐", label: "10 ações", done: false },
-  ];
+const AccountTab = ({ user, onLogout, onAbrirSenha }) => {
   return (
     <div className="page">
       <div className="fade-up" style={{ textAlign: "center", marginBottom: 28 }}>
@@ -662,15 +742,19 @@ const AccountTab = ({ user, onLogout }) => {
           {user.name[0]}
         </div>
         <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>{user.name}</h2>
-        <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>{user.email}</p>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, background: "rgba(0,200,150,.08)", padding: "6px 14px", borderRadius: 20, border: `1px solid rgba(0,200,150,.2)` }}>
-          <span style={{ fontSize: 14 }}>💡</span>
-          <span style={{ fontSize: 13, color: G.emerald, fontWeight: 600 }}>Motor: {ENGINES.find(e => e.id === user.engine)?.title || "Não definido"}</span>
-        </div>
+        <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>@{user.usuario}</p>
+        {user.engine && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, background: "rgba(0,200,150,.08)", padding: "6px 14px", borderRadius: 20, border: `1px solid rgba(0,200,150,.2)` }}>
+            <span style={{ fontSize: 14 }}>💡</span>
+            <span style={{ fontSize: 13, color: G.emerald, fontWeight: 600 }}>
+              Motor: {ENGINES.find(e => e.id === user.engine)?.title || "—"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="card fade-up" style={{ padding: 20, marginBottom: 16, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0, animationDelay: ".05s" }}>
-        {[[user.hours + "h", "Doadas"], [user.actions, "Ações"], [user.streak, "Streak"]].map(([v, l], i) => (
+        {[[Math.round(user.pontuacao), "Pontos"], [user.actions, "Ações"], [user.streak, "Streak"]].map(([v, l], i) => (
           <div key={l} style={{ textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
             <div className="syne" style={{ fontSize: 22, fontWeight: 800, color: G.emerald }}>{v}</div>
             <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>{l}</div>
@@ -693,26 +777,12 @@ const AccountTab = ({ user, onLogout }) => {
         </div>
       </div>
 
-      <div className="card fade-up" style={{ padding: 20, marginBottom: 16, animationDelay: ".15s" }}>
-        <h3 className="syne" style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>🏅 Conquistas</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
-          {achievements.map(a => (
-            <div key={a.label} style={{ textAlign: "center", opacity: a.done ? 1 : .35 }}>
-              <div style={{ fontSize: 28 }}>{a.icon}</div>
-              <div style={{ fontSize: 10, color: a.done ? G.emerald : G.slate, marginTop: 4 }}>{a.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="card fade-up" style={{ padding: 4, marginBottom: 16, animationDelay: ".2s" }}>
-        {[["bell", "Notificações"], ["calendar", "Minhas Inscrições"], ["gift", "Programa de Pontos"]].map(([ic, lbl]) => (
-          <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,.04)", cursor: "pointer" }}>
-            <Icon name={ic} size={18} color={G.slate} />
-            <span style={{ fontSize: 14, flex: 1 }}>{lbl}</span>
-            <Icon name="chevron" size={16} color={G.slate} />
-          </div>
-        ))}
+        <div onClick={onAbrirSenha} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", cursor: "pointer" }}>
+          <Icon name="user" size={18} color={G.slate} />
+          <span style={{ fontSize: 14, flex: 1 }}>Alterar senha</span>
+          <Icon name="chevron" size={16} color={G.slate} />
+        </div>
       </div>
 
       <button className="btn-danger" style={{ width: "100%" }} onClick={onLogout}>
@@ -905,26 +975,277 @@ const DonateTab = () => {
   );
 };
 
+// ── 8. MinhasInscricoesTab ───────────────────────────────────────────────────
+const MinhasInscricoesTab = () => {
+  const [inscricoes, setInscricoes] = useState([]);
+  const [oportunidadesPorId, setOportunidadesPorId] = useState({});
+  const [carregando, setCarregando] = useState(true);
+  const [cancelandoId, setCancelandoId] = useState(null);
+
+  const recarregar = async () => {
+    try {
+      const [minhas, todasOps] = await Promise.all([
+        listarMinhasInscricoes(),
+        listarOportunidades(),
+      ]);
+      const indexadas = {};
+      todasOps.forEach(op => { indexadas[op.id] = op; });
+      setOportunidadesPorId(indexadas);
+      setInscricoes(minhas);
+      setCarregando(false);
+    } catch {
+      setCarregando(false);
+    }
+  };
+
+  useEffect(() => { recarregar(); }, []);
+
+  const handleCancelar = async (id) => {
+    setCancelandoId(id);
+    try {
+      await cancelarInscricao(id);
+      await recarregar();
+    } catch {
+      // mantém a inscrição visível se falhar
+    }
+    setCancelandoId(null);
+  };
+
+  const statusLabel = (status) => {
+    const map = { Inscrito: "Inscrito", Realizado: "Realizado", Expirado: "Perdeu prazo", Cancelado: "Cancelado" };
+    return map[status?.name || status] || status;
+  };
+
+  const statusBadge = (status) => {
+    const s = status?.name || status;
+    if (s === "Inscrito") return "badge-amber";
+    if (s === "Realizado") return "badge-green";
+    return "badge-purple";
+  };
+
+  if (carregando) {
+    return <div className="page" style={{ textAlign: "center", color: G.slate, paddingTop: 100 }}>Carregando…</div>;
+  }
+
+  return (
+    <div className="page">
+      <div className="fade-up" style={{ marginBottom: 24 }}>
+        <h2 className="syne" style={{ fontSize: 24, fontWeight: 800 }}>Minhas Inscrições</h2>
+        <p style={{ color: G.slate, fontSize: 14, marginTop: 6 }}>{inscricoes.length} inscriçã{inscricoes.length === 1 ? "o" : "ões"} no seu histórico</p>
+      </div>
+
+      {inscricoes.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: G.slate }}>
+          Você ainda não se inscreveu em nenhuma oportunidade.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {inscricoes.map(insc => {
+            const op = oportunidadesPorId[insc.idOportunidade];
+            const statusName = insc.statusInscricao?.name || insc.statusInscricao;
+            return (
+              <div key={insc.id} className="card" style={{ padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span className={`badge ${statusBadge(insc.statusInscricao)}`}>{statusLabel(insc.statusInscricao)}</span>
+                  <span className="syne" style={{ fontSize: 13, color: G.emerald, fontWeight: 700 }}>
+                    {Math.round(Number(insc.pontuacaoSnap) * Number(insc.modificadorSnap)) || 0} pts
+                  </span>
+                </div>
+                <h3 className="syne" style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
+                  {op?.titulo || "Oportunidade #" + insc.idOportunidade}
+                </h3>
+                {op && <p style={{ fontSize: 13, color: G.slate, marginBottom: 12 }}>{op.nomeOng}</p>}
+                {statusName === "Inscrito" && (
+                  <button className="btn-ghost" style={{ width: "100%", padding: "8px 12px", fontSize: 13 }}
+                    onClick={() => handleCancelar(insc.id)} disabled={cancelandoId === insc.id}>
+                    {cancelandoId === insc.id ? "Cancelando…" : "Cancelar inscrição"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── 9. RankingTab ─────────────────────────────────────────────────────────────
+const RankingTab = ({ userId }) => {
+  const [ranking, setRanking] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    obterRanking()
+      .then(setRanking)
+      .catch(() => setRanking([]))
+      .finally(() => setCarregando(false));
+  }, []);
+
+  if (carregando) {
+    return <div className="page" style={{ textAlign: "center", color: G.slate, paddingTop: 100 }}>Carregando ranking…</div>;
+  }
+
+  return (
+    <div className="page">
+      <div className="fade-up" style={{ marginBottom: 24, textAlign: "center" }}>
+        <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
+        <h2 className="syne" style={{ fontSize: 24, fontWeight: 800 }}>Ranking</h2>
+        <p style={{ color: G.slate, fontSize: 14, marginTop: 6 }}>Os voluntários mais ativos da plataforma</p>
+      </div>
+
+      {ranking.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: G.slate }}>Ranking ainda não disponível.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {ranking.map(item => {
+            const ehVoce = item.idUsuario === userId;
+            const medal = item.posicao === 1 ? "🥇" : item.posicao === 2 ? "🥈" : item.posicao === 3 ? "🥉" : null;
+            return (
+              <div key={item.idUsuario} className="card" style={{
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                border: ehVoce ? `2px solid ${G.emerald}` : undefined,
+              }}>
+                <div style={{ width: 36, textAlign: "center", fontSize: 18 }}>
+                  {medal || <span className="syne" style={{ color: G.slate, fontWeight: 700 }}>#{item.posicao}</span>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="syne" style={{ fontWeight: 700, fontSize: 14 }}>
+                    {item.nome} {ehVoce && <span style={{ color: G.emerald, fontSize: 11 }}>(você)</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>@{item.usuario}</div>
+                </div>
+                <div className="syne" style={{ fontWeight: 800, color: G.emerald, fontSize: 15 }}>
+                  {Math.round(Number(item.pontuacaoAcumulada))} pts
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── 10. AlterarSenhaModal ─────────────────────────────────────────────────────
+const AlterarSenhaModal = ({ onClose }) => {
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [senhaNova, setSenhaNova] = useState("");
+  const [confirma, setConfirma] = useState("");
+  const [erro, setErro] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [sucesso, setSucesso] = useState(false);
+
+  const handleSubmit = async () => {
+    if (senhaNova !== confirma) { setErro("As senhas novas não coincidem."); return; }
+    if (senhaNova.length < 6) { setErro("Nova senha deve ter ao menos 6 caracteres."); return; }
+    setErro("");
+    setEnviando(true);
+    try {
+      await alterarSenha(senhaAtual, senhaNova);
+      setSucesso(true);
+      setTimeout(onClose, 1500);
+    } catch (e) {
+      const msg = e?.response?.data;
+      setErro(typeof msg === "string" ? msg : "Erro ao alterar senha.");
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 className="syne" style={{ fontSize: 20, fontWeight: 800 }}>Alterar senha</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: G.slate, cursor: "pointer" }}><Icon name="x" size={20} /></button>
+        </div>
+        {sucesso ? (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{ fontSize: 40 }}>✅</div>
+            <p className="syne" style={{ fontWeight: 700, marginTop: 8 }}>Senha alterada!</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 14 }}>
+              <label className="label">Senha atual</label>
+              <input className="input" type="password" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="label">Nova senha</label>
+              <input className="input" type="password" value={senhaNova} onChange={e => setSenhaNova(e.target.value)} />
+            </div>
+            <div style={{ marginBottom: erro ? 12 : 20 }}>
+              <label className="label">Confirmar nova senha</label>
+              <input className="input" type="password" value={confirma} onChange={e => setConfirma(e.target.value)} />
+            </div>
+            {erro && <p style={{ fontSize: 13, color: G.coral, marginBottom: 12 }}>{erro}</p>}
+            <button className="btn-primary" style={{ width: "100%", fontSize: 15 }} onClick={handleSubmit} disabled={enviando}>
+              {enviando ? "Salvando…" : "Salvar nova senha"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ── App Shell ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("login");
   const [tab, setTab] = useState("home");
   const [selectedOp, setSelectedOp] = useState(null);
   const [toast, setToast] = useState(null);
-  const [user, setUser] = useState({ name: "Voluntário", email: "", streak: 0, hours: 0, actions: 0, engine: "impact" });
+  const [user, setUser] = useState({
+    id: null,
+    name: "Voluntário",
+    usuario: "",
+    streak: 0,
+    pontuacao: 0,
+    actions: 0,
+    engine: null,
+  });
 
   const showToast = (msg, icon) => setToast({ msg, icon });
 
-  const onLogin = () => {
-    const username = getUsuarioDoToken();
-    setUser(u => ({ ...u, name: username || "Voluntário" }));
-    setScreen("app");
+  const onLogin = async () => {
+    try {
+      const me = await obterMeusDados();
+      setUser({
+        id: me.id,
+        name: me.nome,
+        usuario: me.usuario,
+        streak: me.streakAtual || 0,
+        pontuacao: Number(me.pontuacaoAcumulada) || 0,
+        actions: 0,
+        engine: me.motor,
+      });
+      setScreen("app");
+    } catch {
+      showToast("Erro ao carregar seus dados.", "⚠️");
+    }
   };
   const onRegister = () => setScreen("register");
-  const onRegDone = (nome, motor) => {
-    setUser(u => ({ ...u, name: nome, engine: motor || "C" }));
-    setScreen("app");
-    showToast("Conta criada com sucesso!", "🎉");
+  const onRegDone = async () => {
+    try {
+      const me = await obterMeusDados();
+      setUser({
+        id: me.id,
+        name: me.nome,
+        usuario: me.usuario,
+        streak: me.streakAtual || 0,
+        pontuacao: Number(me.pontuacaoAcumulada) || 0,
+        actions: 0,
+        engine: me.motor,
+      });
+      setScreen("app");
+      showToast("Conta criada com sucesso!", "🎉");
+    } catch {
+      setScreen("app");
+      showToast("Conta criada, mas falha ao carregar dados.", "⚠️");
+    }
   };
 
   // logout chama o backend antes de limpar o estado local
@@ -934,14 +1255,20 @@ export default function App() {
     setTab("home");
   };
 
-  const onEnroll = (op) => { setUser(u => ({ ...u, actions: u.actions + 1 })); showToast(`Inscrito em "${op.title}"!`, "✅"); };
+  const onEnroll = (op) => {
+    setUser(u => ({ ...u, actions: u.actions + 1 }));
+    showToast(`Inscrito em "${op.titulo || op.title}"!`, "✅");
+  };
   const onScan = () => { setUser(u => ({ ...u, streak: u.streak + 1, hours: u.hours + 2 })); showToast("Check-in registrado! +2h 🔥", "📍"); };
+
+  const [senhaModalOpen, setSenhaModalOpen] = useState(false);
 
   const navItems = [
     { id: "home", icon: "home", label: "Início" },
+    { id: "inscricoes", icon: "calendar", label: "Inscrições" },
+    { id: "ranking", icon: "trophy", label: "Ranking" },
     { id: "qr", icon: "qr", label: "Check-in" },
-    { id: "donate", icon: "heart", label: "Doação" },
-    { id: "account", icon: "user", label: "Minha Conta" },
+    { id: "account", icon: "user", label: "Conta" },
   ];
 
   return (
@@ -963,9 +1290,10 @@ export default function App() {
             </div>
 
             {tab === "home" && <HomeTab user={user} onOpportunity={setSelectedOp} />}
+            {tab === "inscricoes" && <MinhasInscricoesTab />}
+            {tab === "ranking" && <RankingTab userId={user.id} />}
             {tab === "qr" && <QRTab onScan={onScan} />}
-            {tab === "donate" && <DonateTab />}
-            {tab === "account" && <AccountTab user={user} onLogout={onLogout} />}
+            {tab === "account" && <AccountTab user={user} onLogout={onLogout} onAbrirSenha={() => setSenhaModalOpen(true)} />}
 
             <div className="bottom-nav">
               {navItems.map(n => (
@@ -977,6 +1305,7 @@ export default function App() {
             </div>
 
             {selectedOp && <OpportunityModal op={selectedOp} onClose={() => setSelectedOp(null)} onConfirm={onEnroll} />}
+            {senhaModalOpen && <AlterarSenhaModal onClose={() => setSenhaModalOpen(false)} />}
           </>
         )}
 
