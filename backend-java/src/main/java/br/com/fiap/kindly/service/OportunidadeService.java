@@ -2,6 +2,7 @@ package br.com.fiap.kindly.service;
 
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,11 @@ import org.springframework.stereotype.Service;
 import br.com.fiap.kindly.dao.CategoriaDao;
 import br.com.fiap.kindly.dao.OngDao;
 import br.com.fiap.kindly.dao.OportunidadeDao;
+import br.com.fiap.kindly.dao.UsuarioOngDao;
+import br.com.fiap.kindly.dto.OportunidadeRequest;
+import br.com.fiap.kindly.dto.OportunidadeResponseDTO;
+import br.com.fiap.kindly.model.Categoria;
+import br.com.fiap.kindly.model.ONG;
 import br.com.fiap.kindly.model.Oportunidade;
 import br.com.fiap.kindly.model.Status;
 
@@ -19,12 +25,20 @@ public class OportunidadeService {
     private final OportunidadeDao oportunidadeDao;
     private final OngDao ongDao;
     private final CategoriaDao categoriaDao;
+    private final PontuacaoService pontuacaoService;
+    private final UsuarioOngDao usuarioOngDao;
 
     @Autowired
-    public OportunidadeService(OportunidadeDao oportunidadeDao, OngDao ongDao, CategoriaDao categoriaDao) {
+    public OportunidadeService(OportunidadeDao oportunidadeDao,
+            OngDao ongDao,
+            CategoriaDao categoriaDao,
+            PontuacaoService pontuacaoService,
+            UsuarioOngDao usuarioOngDao) {
         this.oportunidadeDao = oportunidadeDao;
         this.ongDao = ongDao;
         this.categoriaDao = categoriaDao;
+        this.pontuacaoService = pontuacaoService;
+        this.usuarioOngDao = usuarioOngDao;
     }
 
     public void cadastrar(String titulo, String descricao, Date dataEvento,
@@ -53,6 +67,20 @@ public class OportunidadeService {
                 Status.Ativo
         );
         oportunidadeDao.inserir(nova);
+    }
+
+    public void cadastrar(Long idUsuario, OportunidadeRequest req) {
+        validarVinculoUsuarioOng(idUsuario, req.getIdOng());
+        cadastrar(
+                req.getTitulo(),
+                req.getDescricao(),
+                req.getDataEvento(),
+                req.getLocalLat(),
+                req.getLocalLong(),
+                req.getVagasTotal(),
+                req.getIdOng(),
+                req.getIdCategoria()
+        );
     }
 
     public List<Oportunidade> listarAtivas() {
@@ -92,6 +120,22 @@ public class OportunidadeService {
         oportunidadeDao.atualizar(existente);
     }
 
+    public void atualizar(Long idUsuario, Long id, OportunidadeRequest req) {
+        Oportunidade existente = buscarPorId(id);
+        validarVinculoUsuarioOng(idUsuario, existente.getIdOng());
+
+        atualizar(
+                id,
+                req.getTitulo(),
+                req.getDescricao(),
+                req.getDataEvento(),
+                req.getLocalLat(),
+                req.getLocalLong(),
+                req.getVagasTotal(),
+                req.getIdCategoria()
+        );
+    }
+
     public void deletar(Long id) {
         buscarPorId(id); // garante que existe antes de deletar
         oportunidadeDao.deletar(id);
@@ -113,6 +157,49 @@ public class OportunidadeService {
         }
         if (vagasTotal == null || vagasTotal <= 0) {
             throw new IllegalArgumentException("Número de vagas deve ser maior que zero.");
+        }
+    }
+
+    public List<OportunidadeResponseDTO> listarAtivasComPontuacao() {
+        List<Oportunidade> oportunidades = oportunidadeDao.listarAtivas();
+        List<OportunidadeResponseDTO> resultado = new ArrayList<>();
+
+        for (Oportunidade op : oportunidades) {
+            OportunidadeResponseDTO dto = montarDTO(op);
+            resultado.add(dto);
+        }
+        return resultado;
+    }
+
+    private OportunidadeResponseDTO montarDTO(Oportunidade op) {
+        ONG ong = ongDao.buscarPorId(op.getIdOng()).orElse(null);
+        Categoria categoria = categoriaDao.buscarPorId(op.getIdCategoria()).orElse(null);
+
+        BigDecimal[] pontuacao = pontuacaoService.calcular(op.getId());
+
+        return new OportunidadeResponseDTO(
+                op.getId(),
+                op.getTitulo(),
+                op.getDescricao(),
+                op.getDataEvento(),
+                op.getLocalLat(),
+                op.getLocalLong(),
+                op.getVagasTotal(),
+                op.getVagasPresente(),
+                op.getIdOng(),
+                ong != null ? ong.getNomeFantasia() : "—",
+                op.getIdCategoria(),
+                categoria != null ? categoria.getNome() : "—",
+                pontuacao[0],
+                pontuacao[1]
+        );
+    }
+
+    private void validarVinculoUsuarioOng(Long idUsuario, Long idOng) {
+        boolean temVinculo = usuarioOngDao.listarPorUsuario(idUsuario).stream()
+                .anyMatch(uo -> uo.getIdOng().equals(idOng));
+        if (!temVinculo) {
+            throw new IllegalArgumentException("Usuário não tem vínculo ativo com esta ONG.");
         }
     }
 }
