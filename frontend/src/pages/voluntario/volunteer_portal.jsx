@@ -662,6 +662,12 @@ const HomeTab = ({ user, onOpportunity }) => {
                     <Icon name="calendar" size={13} color={G.slate} />
                     {op.dataEvento ? new Date(op.dataEvento).toLocaleDateString("pt-BR") : "—"}
                   </div>
+                  {op.endereco && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}>
+                      <Icon name="location" size={13} color={G.slate} />
+                      {op.endereco}
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(0,200,150,.1)", padding: "4px 10px", borderRadius: 12 }}>
                   <span style={{ fontSize: 11, color: G.slate }}>🏆</span>
@@ -718,6 +724,12 @@ const OpportunityModal = ({ op, onClose, onConfirm }) => {
             <span style={{ marginRight: 6 }}>👥</span>
             {op.vagasTotal - (op.vagasPresente || 0)} vagas restantes
           </div>
+          {op.endereco && (
+            <div style={{ background: "rgba(255,255,255,.04)", borderRadius: 10, padding: "10px 12px", fontSize: 13, gridColumn: "1 / -1" }}>
+              <span style={{ marginRight: 6 }}>📍</span>
+              {op.endereco}
+            </div>
+          )}
           <div style={{ background: "rgba(255,255,255,.04)", borderRadius: 10, padding: "10px 12px", fontSize: 13, gridColumn: "1 / -1" }}>
             <span style={{ marginRight: 6 }}>🏆</span>
             <span style={{ color: G.emerald, fontWeight: 700 }}>

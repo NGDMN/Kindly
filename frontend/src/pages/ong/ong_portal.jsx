@@ -152,13 +152,6 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MOCK DATA (dashboards e listas — não afetados pelo auth)
-// ═══════════════════════════════════════════════════════════════════════════════
-const MOCK_ONG = { id: 1, name: "Mão Amiga ONG", cnpj: "12.345.678/0001-90", email: "contato@maoamiga.org.br", phone: "(11) 98765-4321", website: "https://maoamiga.org.br", city: "São Paulo", state: "SP", category: "Social", desc: "Trabalhamos para garantir alimentação e dignidade para famílias em situação de vulnerabilidade social no centro de São Paulo.", founded: "2015", volunteers: 248, hoursImpacted: 3840, actionsCompleted: 127 };
-const CATEGORIES = ["Social", "Educação", "Saúde", "Meio Ambiente", "Cultura", "Esporte", "Tecnologia", "Outro"];
-const STATES = ["SP", "RJ", "MG", "RS", "PR", "SC", "BA", "PE", "CE", "GO", "DF"];
-const BADGE_MAP = { "Social": "amber", "Educação": "green", "Saúde": "purple", "Meio Ambiente": "green", "Cultura": "purple", "Esporte": "amber", "Tecnologia": "green", "Outro": "amber" };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONTEXT
@@ -482,22 +475,27 @@ const OngSelectorScreen = ({ onVoltar }) => {
 // 3. DashboardTab
 // ═══════════════════════════════════════════════════════════════════════════════
 const DashboardTab = () => {
-  const { ong, opportunities, enrollees, setActiveTab } = useOng();
-  const activeOps = opportunities.filter(o => o.status === "active");
-  const confirmedEnrollees = enrollees.filter(e => e.status === "confirmed").length;
-  const checkedIn = enrollees.filter(e => e.checkedIn).length;
+  const { ongAtiva, opportunities, enrollees, setActiveTab } = useOng();
+
+  const totalInscritos = enrollees.length;
+  const realizados = enrollees.filter(e => (e.statusInscricao?.name || e.statusInscricao) === "Realizado").length;
+  const ativas = opportunities.length;
+
   const stats = [
-    { icon: "calendar", label: "Oportunidades Ativas", value: activeOps.length, color: G.emerald, sub: `${opportunities.length} total` },
-    { icon: "users", label: "Total de Inscritos", value: enrollees.length, color: G.purple, sub: `${confirmedEnrollees} confirmados` },
-    { icon: "check-circle", label: "Check-ins Realizados", value: checkedIn, color: G.amber, sub: "presença confirmada" },
-    { icon: "clock", label: "Horas de Impacto", value: `${ong.hoursImpacted}h`, color: G.emerald, sub: "horas doadas" },
+    { icon: "calendar", label: "Oportunidades Ativas", value: ativas, color: G.emerald, sub: "cadastradas e ativas" },
+    { icon: "users", label: "Total de Inscritos", value: totalInscritos, color: G.purple, sub: "em todas as oportunidades" },
+    { icon: "check-circle", label: "Ações Realizadas", value: realizados, color: G.amber, sub: "presença confirmada" },
   ];
+
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 28 }}>
         <p style={{ color: G.slate, fontSize: 13 }}>Bem-vinda de volta 👋</p>
-        <h2 className="syne" style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em" }}>{ong.name}</h2>
+        <h2 className="syne" style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em" }}>
+          {ongAtiva?.nomeFantasia || "—"}
+        </h2>
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 32 }}>
         {stats.map((s, i) => (
           <div key={s.label} className="stat-card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
@@ -512,55 +510,61 @@ const DashboardTab = () => {
           </div>
         ))}
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        <div className="card-static fade-up" style={{ padding: 20, animationDelay: ".24s" }}>
+        <div className="card-static fade-up" style={{ padding: 20, animationDelay: ".18s" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h3 className="syne" style={{ fontSize: 15, fontWeight: 700 }}>Oportunidades Recentes</h3>
             <button onClick={() => setActiveTab("opportunities")} style={{ background: "none", border: "none", color: G.emerald, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Ver todas →</button>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {opportunities.slice(0, 3).map(op => (
-              <div key={op.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: `rgba(0,200,150,.1)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="calendar" size={16} color={G.emerald} />
+          {opportunities.length === 0 ? (
+            <p style={{ fontSize: 13, color: G.slate }}>Nenhuma oportunidade cadastrada.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {opportunities.slice(0, 3).map(op => (
+                <div key={op.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: "rgba(0,200,150,.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="calendar" size={16} color={G.emerald} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{op.titulo}</div>
+                    <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>
+                      {op.dataEvento ? new Date(op.dataEvento).toLocaleDateString("pt-BR") : "—"} · {op.vagasPresente || 0}/{op.vagasTotal} vagas
+                    </div>
+                  </div>
+                  <span className="badge badge-green">Ativa</span>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{op.title}</div>
-                  <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>{op.date} · {op.filled}/{op.spots} vagas</div>
-                </div>
-                <span className={`badge badge-${op.status === "active" ? "green" : op.status === "draft" ? "amber" : "slate"}`}>{op.status === "active" ? "Ativa" : op.status === "draft" ? "Rascunho" : "Encerrada"}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="card-static fade-up" style={{ padding: 20, animationDelay: ".3s" }}>
+
+        <div className="card-static fade-up" style={{ padding: 20, animationDelay: ".24s" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h3 className="syne" style={{ fontSize: 15, fontWeight: 700 }}>Inscrições Recentes</h3>
             <button onClick={() => setActiveTab("enrollees")} style={{ background: "none", border: "none", color: G.emerald, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Ver todas →</button>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {enrollees.slice(0, 5).map(e => (
-              <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>{e.name[0]}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.name}</div>
-                  <div style={{ fontSize: 11, color: G.slate }}>{e.enrolledAt}</div>
-                </div>
-                <span className={`badge badge-${e.status === "confirmed" ? "green" : e.status === "pending" ? "amber" : "coral"}`}>{e.status === "confirmed" ? "Confirmado" : e.status === "pending" ? "Pendente" : "Cancelado"}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="card-static fade-up" style={{ padding: 24, marginTop: 20, animationDelay: ".36s" }}>
-        <h3 className="syne" style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>🏆 Resumo de Impacto</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
-          {[[ong.volunteers, "Voluntários mobilizados"], [ong.hoursImpacted + "h", "Horas de impacto"], [ong.actionsCompleted, "Ações concluídas"]].map(([v, l], i) => (
-            <div key={String(l)} style={{ textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none", padding: "0 16px" }}>
-              <div className="syne" style={{ fontSize: 28, fontWeight: 800, color: G.emerald }}>{v}</div>
-              <div style={{ fontSize: 12, color: G.slate, marginTop: 4 }}>{l}</div>
+          {enrollees.length === 0 ? (
+            <p style={{ fontSize: 13, color: G.slate }}>Nenhuma inscrição ainda.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {enrollees.slice(0, 5).map(e => {
+                const statusName = e.statusInscricao?.name || e.statusInscricao;
+                const badgeClass = statusName === "Realizado" ? "badge-green" : statusName === "Inscrito" ? "badge-amber" : "badge-slate";
+                return (
+                  <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: G.emerald }}>
+                      #{e.idUsuario}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>Usuário #{e.idUsuario}</div>
+                    </div>
+                    <span className={`badge ${badgeClass}`}>{statusName}</span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
@@ -991,63 +995,97 @@ const EnrolleesTab = () => {
 // 7. ProfileTab
 // ═══════════════════════════════════════════════════════════════════════════════
 const ProfileTab = () => {
-  const { ong, setOng, showToast } = useOng();
+  const { ongAtiva, selecionarOng, showToast } = useOng();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ ...ong });
+  const [form, setForm] = useState({
+    razaoSocial: ongAtiva?.razaoSocial || "",
+    nomeFantasia: ongAtiva?.nomeFantasia || "",
+  });
+  const [salvando, setSalvando] = useState(false);
+
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const handleSave = () => { setOng(form); setEditing(false); showToast("Perfil atualizado!", "✅"); };
-  const handleCancel = () => { setForm({ ...ong }); setEditing(false); };
+
+  const handleSave = async () => {
+    if (!form.razaoSocial.trim() || !form.nomeFantasia.trim()) {
+      showToast("Preencha todos os campos.", "⚠️");
+      return;
+    }
+    setSalvando(true);
+    try {
+      await atualizarOng(ongAtiva.id, {
+        razaoSocial: form.razaoSocial,
+        nomeFantasia: form.nomeFantasia,
+      });
+      // Atualiza a ONG ativa no contexto e no localStorage
+      selecionarOng({ ...ongAtiva, razaoSocial: form.razaoSocial, nomeFantasia: form.nomeFantasia });
+      setEditing(false);
+      showToast("Perfil atualizado!", "✅");
+    } catch {
+      showToast("Erro ao salvar. Tente novamente.", "⚠️");
+    }
+    setSalvando(false);
+  };
+
+  const handleCancel = () => {
+    setForm({ razaoSocial: ongAtiva?.razaoSocial || "", nomeFantasia: ongAtiva?.nomeFantasia || "" });
+    setEditing(false);
+  };
 
   return (
-    <div className="fade-up" style={{ maxWidth: 680 }}>
+    <div className="fade-up" style={{ maxWidth: 580 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-        <div><h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Perfil da ONG</h2><p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Informações públicas da sua organização.</p></div>
+        <div>
+          <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Perfil da ONG</h2>
+          <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Informações da sua organização.</p>
+        </div>
         {!editing ? (
-          <button className="btn-ghost btn-sm" onClick={() => setEditing(true)}><Icon name="edit" size={14} color={G.emerald} />Editar</button>
+          <button className="btn-ghost btn-sm" onClick={() => setEditing(true)}>
+            <Icon name="edit" size={14} color={G.emerald} />Editar
+          </button>
         ) : (
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn-ghost btn-sm" onClick={handleCancel}>Cancelar</button>
-            <button className="btn-primary btn-sm" onClick={handleSave}><Icon name="check" size={14} color={G.navy} />Salvar</button>
+            <button className="btn-primary btn-sm" onClick={handleSave} disabled={salvando}>
+              <Icon name="check" size={14} color={G.navy} />
+              {salvando ? "Salvando…" : "Salvar"}
+            </button>
           </div>
         )}
       </div>
-      <div className="card-static" style={{ padding: 24, marginBottom: 20 }}>
+
+      <div className="card-static" style={{ padding: 24, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
           <div style={{ width: 72, height: 72, borderRadius: 18, flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🤝</div>
           <div>
-            {editing ? <input className="input" value={form.name} onChange={e => upd("name", e.target.value)} style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }} /> : <h3 className="syne" style={{ fontSize: 20, fontWeight: 800 }}>{ong.name}</h3>}
-            <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-              <span className="badge badge-green">{ong.category}</span>
-              <span className="badge badge-slate">{ong.city}, {ong.state}</span>
-              <span className="badge badge-slate">Desde {ong.founded}</span>
-            </div>
+            <h3 className="syne" style={{ fontSize: 20, fontWeight: 800 }}>
+              {ongAtiva?.nomeFantasia || "—"}
+            </h3>
+            <p style={{ fontSize: 13, color: G.slate, marginTop: 4 }}>{ongAtiva?.razaoSocial || "—"}</p>
           </div>
         </div>
+
         <div className="form-group">
-          <label className="label">Descrição</label>
-          {editing ? <textarea className="input" value={form.desc} onChange={e => upd("desc", e.target.value)} style={{ minHeight: 90 }} /> : <p style={{ fontSize: 14, color: G.slate, lineHeight: 1.6 }}>{ong.desc}</p>}
+          <label className="label">Nome Fantasia</label>
+          {editing ? (
+            <input className="input" type="text" value={form.nomeFantasia} onChange={e => upd("nomeFantasia", e.target.value)} />
+          ) : (
+            <div style={{ fontSize: 14, color: G.white }}>{ongAtiva?.nomeFantasia || "—"}</div>
+          )}
         </div>
-      </div>
-      <div className="card-static" style={{ padding: 24, marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} /><span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Contato</span></div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {[["email", "E-mail", "email"], ["phone", "Telefone", "tel"], ["website", "Website", "url"], ["city", "Cidade", "text"]].map(([key, label, type]) => (
-            <div key={key} className="form-group">
-              <label className="label">{label}</label>
-              {editing ? <input className="input" type={type} value={form[key]} onChange={e => upd(key, e.target.value)} /> : <div style={{ fontSize: 14, color: G.white }}>{ong[key] || "—"}</div>}
-            </div>
-          ))}
+
+        <div className="form-group" style={{ marginTop: 16 }}>
+          <label className="label">Razão Social</label>
+          {editing ? (
+            <input className="input" type="text" value={form.razaoSocial} onChange={e => upd("razaoSocial", e.target.value)} />
+          ) : (
+            <div style={{ fontSize: 14, color: G.white }}>{ongAtiva?.razaoSocial || "—"}</div>
+          )}
         </div>
-      </div>
-      <div className="card-static" style={{ padding: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}><div style={{ width: 4, height: 18, background: G.emerald, borderRadius: 2 }} /><span className="syne" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Impacto na Plataforma</span></div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
-          {[[ong.volunteers, "Voluntários"], [ong.hoursImpacted + "h", "Horas"], [ong.actionsCompleted, "Ações"]].map(([v, l], i) => (
-            <div key={String(l)} style={{ textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none", padding: "0 16px" }}>
-              <div className="syne" style={{ fontSize: 26, fontWeight: 800, color: G.emerald }}>{v}</div>
-              <div style={{ fontSize: 12, color: G.slate, marginTop: 4 }}>{l}</div>
-            </div>
-          ))}
+
+        <div className="form-group" style={{ marginTop: 16 }}>
+          <label className="label">CNPJ</label>
+          <div style={{ fontSize: 14, color: G.slate }}>{ongAtiva?.cnpj || "—"}</div>
+          <div style={{ fontSize: 11, color: G.slate, marginTop: 4 }}>Não editável</div>
         </div>
       </div>
     </div>
@@ -1110,7 +1148,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
 };
 
 const TopNav = ({ onMenuToggle }) => {
-  const { activeTab, ong, setActiveTab } = useOng();
+  const { activeTab, ongAtiva, setActiveTab } = useOng();
   const TAB_LABELS = { dashboard: "Dashboard", opportunities: "Minhas Oportunidades", create: "Nova Oportunidade", enrollees: "Inscritos", profile: "Perfil da ONG" };
   return (
     <header className="top-nav">
@@ -1129,8 +1167,8 @@ const TopNav = ({ onMenuToggle }) => {
         <button className="btn-primary btn-sm" onClick={() => setActiveTab("create")} style={{ padding: "8px 14px", fontSize: 13 }}>
           <Icon name="plus" size={14} color={G.navy} />Nova Oportunidade
         </button>
-        <div style={{ width: 34, height: 34, borderRadius: "50%", background: `linear-gradient(135deg, ${G.emerald}, ${G.purple})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: G.navy, cursor: "pointer", flexShrink: 0 }} title={ong.name}>
-          {ong.name[0]}
+        <div style={{ width: 34, height: 34, borderRadius: "50%", background: `linear-gradient(135deg, ${G.emerald}, ${G.purple})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: G.navy, cursor: "pointer", flexShrink: 0 }} title={ongAtiva?.nomeFantasia || ""}>
+          {ongAtiva?.nomeFantasia?.[0] || "?"}
         </div>
       </div>
     </header>
