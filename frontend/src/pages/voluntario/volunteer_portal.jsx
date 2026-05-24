@@ -414,6 +414,16 @@ const LoginScreen = ({ onLogin, onRegister }) => {
           </div>
         </div>
 
+        <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: G.slate }}>
+          Representa uma ONG?{" "}
+
+          <a href="/index-ong.html"
+            style={{ color: G.emerald, fontWeight: 600, textDecoration: "none" }}
+          >
+            Acesse o portal ONG →
+          </a>
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 24 }}>
           {[["12.4k", "Voluntários"], ["580", "ONGs"], ["84k h", "Doadas"]].map(([n, l]) => (
             <div key={l} style={{ textAlign: "center" }}>
@@ -423,7 +433,7 @@ const LoginScreen = ({ onLogin, onRegister }) => {
           ))}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
