@@ -1,5 +1,15 @@
 import { useState, useEffect, createContext, useContext } from "react";
-import { login, registrar, logout } from "../../services/api";
+import {
+  login,
+  registrar,
+  logout,
+  listarOportunidades,
+  listarCategorias,
+  listarMinhasOngs,
+  listarInscricoesDaOportunidade,
+  criarOportunidade,
+  atualizarOportunidade,
+} from "../../services/api";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DESIGN SYSTEM
@@ -144,22 +154,6 @@ const Icon = ({ name, size = 20, color = "currentColor" }) => {
 // MOCK DATA (dashboards e listas — não afetados pelo auth)
 // ═══════════════════════════════════════════════════════════════════════════════
 const MOCK_ONG = { id: 1, name: "Mão Amiga ONG", cnpj: "12.345.678/0001-90", email: "contato@maoamiga.org.br", phone: "(11) 98765-4321", website: "https://maoamiga.org.br", city: "São Paulo", state: "SP", category: "Social", desc: "Trabalhamos para garantir alimentação e dignidade para famílias em situação de vulnerabilidade social no centro de São Paulo.", founded: "2015", volunteers: 248, hoursImpacted: 3840, actionsCompleted: 127 };
-const MOCK_OPPORTUNITIES = [
-  { id: 1, title: "Distribuição de Refeições", category: "Social", date: "12 Mai", time: "08h–12h", location: "Centro, SP", hours: 4, spots: 12, filled: 9, badge: "amber", desc: "Participe da distribuição de marmitas para pessoas em situação de rua.", skills: ["Trabalho em equipe", "Empatia", "Pontualidade"], status: "active" },
-  { id: 2, title: "Tutoria em Matemática", category: "Educação", date: "15 Mai", time: "14h–16h", location: "Pinheiros, SP", hours: 2, spots: 8, filled: 3, badge: "green", desc: "Ajude crianças e adolescentes em situação de vulnerabilidade a superarem dificuldades em matemática.", skills: ["Paciência", "Matemática", "Comunicação"], status: "active" },
-  { id: 3, title: "Oficina de Artesanato", category: "Cultura", date: "20 Mai", time: "10h–13h", location: "Vila Madalena, SP", hours: 3, spots: 15, filled: 15, badge: "purple", desc: "Oficina de artesanato para idosos em asilo parceiro.", skills: ["Criatividade", "Paciência", "Empatia"], status: "closed" },
-  { id: 4, title: "Mutirão de Limpeza", category: "Meio Ambiente", date: "25 Mai", time: "07h–10h", location: "Parque Estadual, SP", hours: 3, spots: 20, filled: 5, badge: "green", desc: "Mutirão de limpeza do parque estadual.", skills: ["Consciência ambiental", "Trabalho em equipe"], status: "draft" },
-];
-const MOCK_ENROLLEES = [
-  { id: 1, opportunityId: 1, name: "Maria Silva", email: "maria@email.com", phone: "(11) 99999-1111", city: "São Paulo", enrolledAt: "2 Mai", status: "confirmed", checkedIn: true },
-  { id: 2, opportunityId: 1, name: "João Santos", email: "joao@email.com", phone: "(11) 99999-2222", city: "São Paulo", enrolledAt: "3 Mai", status: "confirmed", checkedIn: false },
-  { id: 3, opportunityId: 1, name: "Ana Oliveira", email: "ana@email.com", phone: "(11) 99999-3333", city: "Guarulhos", enrolledAt: "4 Mai", status: "pending", checkedIn: false },
-  { id: 4, opportunityId: 1, name: "Carlos Pereira", email: "carlos@email.com", phone: "(11) 99999-4444", city: "São Paulo", enrolledAt: "4 Mai", status: "confirmed", checkedIn: true },
-  { id: 5, opportunityId: 1, name: "Fernanda Costa", email: "fernanda@email.com", phone: "(11) 99999-5555", city: "Santo André", enrolledAt: "5 Mai", status: "cancelled", checkedIn: false },
-  { id: 6, opportunityId: 2, name: "Lucas Mendes", email: "lucas@email.com", phone: "(11) 99999-6666", city: "São Paulo", enrolledAt: "3 Mai", status: "confirmed", checkedIn: false },
-  { id: 7, opportunityId: 2, name: "Beatriz Lima", email: "beatriz@email.com", phone: "(11) 99999-7777", city: "São Paulo", enrolledAt: "5 Mai", status: "confirmed", checkedIn: false },
-  { id: 8, opportunityId: 2, name: "Rafael Souza", email: "rafael@email.com", phone: "(11) 99999-8888", city: "Osasco", enrolledAt: "6 Mai", status: "pending", checkedIn: false },
-];
 const CATEGORIES = ["Social", "Educação", "Saúde", "Meio Ambiente", "Cultura", "Esporte", "Tecnologia", "Outro"];
 const STATES = ["SP", "RJ", "MG", "RS", "PR", "SC", "BA", "PE", "CE", "GO", "DF"];
 const BADGE_MAP = { "Social": "amber", "Educação": "green", "Saúde": "purple", "Meio Ambiente": "green", "Cultura": "purple", "Esporte": "amber", "Tecnologia": "green", "Outro": "amber" };
@@ -171,19 +165,65 @@ const OngContext = createContext(null);
 
 function OngProvider({ children }) {
   const [screen, setScreen] = useState("login");
-  const [ong, setOng] = useState(MOCK_ONG);
-  const [opportunities, setOpportunities] = useState(MOCK_OPPORTUNITIES);
-  const [enrollees] = useState(MOCK_ENROLLEES);
+  const [ong, setOng] = useState(MOCK_ONG); // mock mantido para dashboard/profile conforme escopo definido
+  const [minhasOngs, setMinhasOngs] = useState([]); // IDs reais das ONGs do usuário, vindo do /ongs/minhas
+  const [opportunities, setOpportunities] = useState([]);
+  const [enrollees, setEnrollees] = useState([]);
+  const [carregandoDados, setCarregandoDados] = useState(false);
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const showToast = (msg, icon = "✅") => { setToast({ msg, icon }); setTimeout(() => setToast(null), 3200); };
-  const addOpportunity = (op) => setOpportunities(prev => [{ ...op, id: Date.now(), filled: 0 }, ...prev]);
-  const updateOpportunity = (op) => setOpportunities(prev => prev.map(o => o.id === op.id ? op : o));
-  const deleteOpportunity = (id) => setOpportunities(prev => prev.filter(o => o.id !== id));
+
+  // Carrega todas as oportunidades das ONGs do usuário + todos os inscritos dessas oportunidades
+  const recarregarDados = async () => {
+    setCarregandoDados(true);
+    try {
+      const ongs = await listarMinhasOngs();
+      setMinhasOngs(ongs);
+      const idsOngs = new Set(ongs.map(o => o.id));
+
+      // /oportunidades retorna todas as ativas; filtramos no front pelas ONGs vinculadas
+      const todasOps = await listarOportunidades();
+      const minhasOps = todasOps.filter(op => idsOngs.has(op.idOng));
+      setOpportunities(minhasOps);
+
+      // Para cada oportunidade, busca os inscritos em paralelo
+      const inscPorOp = await Promise.all(
+        minhasOps.map(op =>
+          listarInscricoesDaOportunidade(op.id)
+            .then(lista => lista.map(i => ({ ...i, idOportunidade: op.id })))
+            .catch(() => [])
+        )
+      );
+      setEnrollees(inscPorOp.flat());
+    } catch {
+      setMinhasOngs([]);
+      setOpportunities([]);
+      setEnrollees([]);
+    }
+    setCarregandoDados(false);
+  };
+
+  // Carrega dados quando entra no portal
+  useEffect(() => {
+    if (screen === "portal") {
+      recarregarDados();
+    }
+  }, [screen]);
 
   return (
-    <OngContext.Provider value={{ screen, setScreen, ong, setOng, opportunities, addOpportunity, updateOpportunity, deleteOpportunity, enrollees, toast, showToast, activeTab, setActiveTab }}>
+    <OngContext.Provider value={{
+      screen, setScreen,
+      ong, setOng,
+      minhasOngs,
+      opportunities,
+      enrollees,
+      carregandoDados,
+      recarregarDados,
+      toast, showToast,
+      activeTab, setActiveTab,
+    }}>
       {children}
     </OngContext.Provider>
   );
@@ -476,13 +516,19 @@ const DashboardTab = () => {
 // 4. OpportunitiesTab
 // ═══════════════════════════════════════════════════════════════════════════════
 const OpportunitiesTab = () => {
-  const { opportunities, deleteOpportunity, updateOpportunity, setActiveTab, showToast, enrollees } = useOng();
+  const { opportunities, carregandoDados, setActiveTab, enrollees } = useOng();
   const [filter, setFilter] = useState("all");
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const filtered = filter === "all" ? opportunities : opportunities.filter(o => o.status === filter);
-  const handleDelete = (id) => { deleteOpportunity(id); setDeleteConfirm(null); showToast("Oportunidade removida.", "🗑️"); };
-  const handleToggleStatus = (op) => { const next = op.status === "active" ? "closed" : "active"; updateOpportunity({ ...op, status: next }); showToast(`Oportunidade ${next === "active" ? "ativada" : "encerrada"}.`, next === "active" ? "✅" : "🔒"); };
-  const getEnrolleeCount = (opId) => enrollees.filter(e => e.opportunityId === opId).length;
+
+  // Backend só persiste oportunidades ativas, mas mantemos o filtro de UI
+  // Toda oportunidade vinda do backend é considerada "active"
+  const opsComStatus = opportunities.map(op => ({ ...op, statusUI: "active" }));
+  const filtered = filter === "all" ? opsComStatus : opsComStatus.filter(o => o.statusUI === filter);
+
+  const getEnrolleeCount = (opId) => enrollees.filter(e => e.idOportunidade === opId).length;
+
+  if (carregandoDados) {
+    return <div className="empty-state"><p>Carregando oportunidades…</p></div>;
+  }
 
   return (
     <div className="fade-up">
@@ -493,64 +539,61 @@ const OpportunitiesTab = () => {
         </div>
         <button className="btn-primary btn-sm" onClick={() => setActiveTab("create")}><Icon name="plus" size={14} color={G.navy} />Nova</button>
       </div>
+
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-        {["all", "active", "draft", "closed"].map(f => (
+        {["all", "active"].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.emerald : "rgba(255,255,255,.05)", color: filter === f ? G.navy : G.white, border: "none", borderRadius: 20, padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Syne', sans-serif", transition: "all .2s" }}>
-            {f === "all" ? "Todas" : f === "active" ? "Ativa" : f === "draft" ? "Rascunho" : "Encerrada"}
+            {f === "all" ? "Todas" : "Ativa"}
             <span style={{ marginLeft: 6, fontSize: 11, background: filter === f ? "rgba(13,31,45,.2)" : "rgba(255,255,255,.08)", padding: "1px 6px", borderRadius: 10 }}>
-              {f === "all" ? opportunities.length : opportunities.filter(o => o.status === f).length}
+              {f === "all" ? opsComStatus.length : opsComStatus.filter(o => o.statusUI === f).length}
             </span>
           </button>
         ))}
       </div>
+
       {filtered.length === 0 ? (
-        <div className="empty-state"><div style={{ fontSize: 40, marginBottom: 12 }}>📋</div><p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhuma oportunidade aqui</p><button className="btn-primary" onClick={() => setActiveTab("create")}><Icon name="plus" size={16} color={G.navy} />Criar Oportunidade</button></div>
+        <div className="empty-state">
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+          <p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhuma oportunidade cadastrada</p>
+          <button className="btn-primary" onClick={() => setActiveTab("create")}><Icon name="plus" size={16} color={G.navy} />Criar Oportunidade</button>
+        </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {filtered.map((op, i) => (
             <div key={op.id} className="card fade-up" style={{ padding: 20, animationDelay: `${i * 0.06}s` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <span className={`badge badge-${op.badge}`}>{op.category}</span>
-                  <span className={`badge badge-${op.status === "active" ? "green" : op.status === "draft" ? "amber" : "slate"}`}>{op.status === "active" ? "Ativa" : op.status === "draft" ? "Rascunho" : "Encerrada"}</span>
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button title={op.status === "active" ? "Encerrar" : "Ativar"} onClick={() => handleToggleStatus(op)} style={{ background: "rgba(255,255,255,.05)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><Icon name={op.status === "active" ? "eye-off" : "eye"} size={15} color={G.slate} /></button>
-                  <button title="Excluir" onClick={() => setDeleteConfirm(op.id)} style={{ background: "rgba(255,95,95,.08)", border: "none", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}><Icon name="trash" size={15} color={G.coral} /></button>
+                  <span className="badge badge-green">{op.nomeCategoria}</span>
+                  <span className="badge badge-green">Ativa</span>
                 </div>
               </div>
-              <h3 className="syne" style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{op.title}</h3>
-              <p style={{ fontSize: 13, color: G.slate, marginBottom: 14, lineHeight: 1.5 }}>{op.desc.slice(0, 100)}...</p>
+              <h3 className="syne" style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{op.titulo}</h3>
+              <p style={{ fontSize: 13, color: G.slate, marginBottom: 14, lineHeight: 1.5 }}>{(op.descricao || "").slice(0, 100)}{op.descricao && op.descricao.length > 100 ? "…" : ""}</p>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
-                {[["calendar", op.date], ["clock", op.time], ["map", op.location]].map(([ic, val]) => (
-                  <div key={ic + val} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}><Icon name={ic} size={13} color={G.slate} /> {val}</div>
-                ))}
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}>
+                  <Icon name="calendar" size={13} color={G.slate} />
+                  {op.dataEvento ? new Date(op.dataEvento).toLocaleDateString("pt-BR") : "—"}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: G.slate }}>
+                  <Icon name="trophy" size={13} color={G.slate} />
+                  {Math.round(Number(op.pontuacao) || 0)} pts
+                </div>
               </div>
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: G.slate, marginBottom: 6 }}>
                   <span>Vagas preenchidas</span>
-                  <span style={{ color: op.filled >= op.spots ? G.coral : G.emerald }}>{op.filled}/{op.spots}</span>
+                  <span style={{ color: G.emerald }}>{op.vagasPresente || 0}/{op.vagasTotal}</span>
                 </div>
-                <div className="progress-bar"><div className="progress-fill" style={{ width: `${Math.min((op.filled / op.spots) * 100, 100)}%` }} /></div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${Math.min(((op.vagasPresente || 0) / op.vagasTotal) * 100, 100)}%` }} />
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: G.slate }}><Icon name="users" size={13} color={G.slate} />{getEnrolleeCount(op.id)} inscrito{getEnrolleeCount(op.id) !== 1 ? "s" : ""}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: G.slate }}>
+                <Icon name="users" size={13} color={G.slate} />
+                {getEnrolleeCount(op.id)} inscrito{getEnrolleeCount(op.id) !== 1 ? "s" : ""}
+              </div>
             </div>
           ))}
-        </div>
-      )}
-      {deleteConfirm !== null && (
-        <div className="modal-bg" onClick={() => setDeleteConfirm(null)}>
-          <div className="modal-box" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
-              <h3 className="syne" style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Excluir oportunidade?</h3>
-              <p style={{ color: G.slate, fontSize: 14 }}>Esta ação não pode ser desfeita.</p>
-            </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteConfirm(null)}>Cancelar</button>
-              <button className="btn-danger" style={{ flex: 1 }} onClick={() => handleDelete(deleteConfirm)}>Excluir</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
@@ -560,41 +603,80 @@ const OpportunitiesTab = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. CreateOpportunityTab
 // ═══════════════════════════════════════════════════════════════════════════════
+const Field = ({ label, error, children }) => (
+  <div className="form-group">
+    <label className="label">{label}</label>
+    {children}
+    {error && <span style={{ fontSize: 11, color: G.coral, marginTop: 4, display: "block" }}>{error}</span>}
+  </div>
+);
 const CreateOpportunityTab = () => {
-  const { addOpportunity, setActiveTab, showToast } = useOng();
-  const [form, setForm] = useState({ title: "", category: "", date: "", time: "", location: "", hours: "", spots: "", desc: "", skills: "" });
+  const { minhasOngs, setActiveTab, showToast, recarregarDados } = useOng();
+  const [categorias, setCategorias] = useState([]);
+  const [form, setForm] = useState({
+    titulo: "",
+    descricao: "",
+    dataEvento: "",
+    localLat: "",
+    localLong: "",
+    vagasTotal: "",
+    idOng: "",
+    idCategoria: "",
+  });
   const [errors, setErrors] = useState({});
+  const [enviando, setEnviando] = useState(false);
+
+  useEffect(() => {
+    listarCategorias().then(setCategorias).catch(() => setCategorias([]));
+  }, []);
+
+  useEffect(() => {
+    if (minhasOngs.length === 1 && !form.idOng) {
+      setForm(f => ({ ...f, idOng: String(minhasOngs[0].id) }));
+    }
+  }, [minhasOngs]);
+
   const upd = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })); };
 
   const validate = () => {
     const e = {};
-    if (!form.title.trim()) e.title = "Obrigatório";
-    if (!form.category) e.category = "Obrigatório";
-    if (!form.date.trim()) e.date = "Obrigatório";
-    if (!form.time.trim()) e.time = "Obrigatório";
-    if (!form.location.trim()) e.location = "Obrigatório";
-    if (!form.hours || isNaN(Number(form.hours))) e.hours = "Número inválido";
-    if (!form.spots || isNaN(Number(form.spots))) e.spots = "Número inválido";
-    if (!form.desc.trim()) e.desc = "Obrigatório";
+    if (!form.titulo.trim()) e.titulo = "Obrigatório";
+    if (!form.descricao.trim()) e.descricao = "Obrigatório";
+    if (!form.dataEvento) e.dataEvento = "Obrigatório";
+    if (!form.localLat || isNaN(Number(form.localLat))) e.localLat = "Inválido";
+    if (!form.localLong || isNaN(Number(form.localLong))) e.localLong = "Inválido";
+    if (!form.vagasTotal || isNaN(Number(form.vagasTotal)) || Number(form.vagasTotal) <= 0) e.vagasTotal = "Inválido";
+    if (!form.idOng) e.idOng = "Selecione a ONG";
+    if (!form.idCategoria) e.idCategoria = "Selecione a categoria";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (status) => {
+  const handleSubmit = async () => {
     if (!validate()) return;
-    addOpportunity({ title: form.title, category: form.category, date: form.date, time: form.time, location: form.location, hours: Number(form.hours), spots: Number(form.spots), badge: BADGE_MAP[form.category] || "green", desc: form.desc, skills: form.skills.split(",").map(s => s.trim()).filter(Boolean), status });
-    setForm({ title: "", category: "", date: "", time: "", location: "", hours: "", spots: "", desc: "", skills: "" });
-    showToast(status === "active" ? "Oportunidade publicada! 🎉" : "Rascunho salvo.", status === "active" ? "✅" : "💾");
-    setActiveTab("opportunities");
+    setEnviando(true);
+    try {
+      await criarOportunidade({
+        titulo: form.titulo,
+        descricao: form.descricao,
+        dataEvento: form.dataEvento,
+        localLat: Number(form.localLat),
+        localLong: Number(form.localLong),
+        vagasTotal: Number(form.vagasTotal),
+        idOng: Number(form.idOng),
+        idCategoria: Number(form.idCategoria),
+      });
+      showToast("Oportunidade publicada! 🎉", "✅");
+      await recarregarDados();
+      setActiveTab("opportunities");
+    } catch (e) {
+      const msg = e?.response?.data;
+      showToast(typeof msg === "string" ? msg : "Erro ao publicar.", "⚠️");
+    }
+    setEnviando(false);
   };
 
-  const Field = ({ label, error, children }) => (
-    <div className="form-group">
-      <label className="label">{label}</label>
-      {children}
-      {error && <span style={{ fontSize: 11, color: G.coral, marginTop: 4, display: "block" }}>{error}</span>}
-    </div>
-  );
+
 
   return (
     <div className="fade-up" style={{ maxWidth: 640 }}>
@@ -603,27 +685,57 @@ const CreateOpportunityTab = () => {
         <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Preencha os detalhes para mobilizar voluntários.</p>
       </div>
       <div className="card-static" style={{ padding: 28 }}>
-        <Field label="Título da oportunidade" error={errors.title}><input className="input" type="text" placeholder="Ex: Tutoria em Matemática" value={form.title} onChange={e => upd("title", e.target.value)} style={errors.title ? { borderColor: G.coral } : {}} /></Field>
+        <Field label="Título" error={errors.titulo}>
+          <input className="input" type="text" placeholder="Ex: Tutoria em Matemática" value={form.titulo} onChange={e => upd("titulo", e.target.value)} style={errors.titulo ? { borderColor: G.coral } : {}} />
+        </Field>
+
+        <Field label="ONG responsável" error={errors.idOng}>
+          <select className="input" value={form.idOng} onChange={e => upd("idOng", e.target.value)} style={errors.idOng ? { borderColor: G.coral } : {}}>
+            <option value="">Selecione</option>
+            {minhasOngs.map(o => <option key={o.id} value={o.id}>{o.nomeFantasia}</option>)}
+          </select>
+        </Field>
+
+        <Field label="Categoria" error={errors.idCategoria}>
+          <select className="input" value={form.idCategoria} onChange={e => upd("idCategoria", e.target.value)} style={errors.idCategoria ? { borderColor: G.coral } : {}}>
+            <option value="">Selecione</option>
+            {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+        </Field>
+
+        <Field label="Descrição" error={errors.descricao}>
+          <textarea className="input" placeholder="Descreva a atividade…" value={form.descricao} onChange={e => upd("descricao", e.target.value)} style={{ minHeight: 110, ...(errors.descricao ? { borderColor: G.coral } : {}) }} />
+        </Field>
+
+        <div className="divider" />
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <Field label="Categoria" error={errors.category}><select className="input" value={form.category} onChange={e => upd("category", e.target.value)} style={errors.category ? { borderColor: G.coral } : {}}><option value="">Selecione</option>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></Field>
-          <Field label="Local" error={errors.location}><input className="input" type="text" placeholder="Ex: Centro, São Paulo" value={form.location} onChange={e => upd("location", e.target.value)} style={errors.location ? { borderColor: G.coral } : {}} /></Field>
+          <Field label="Data do evento" error={errors.dataEvento}>
+            <input className="input" type="date" value={form.dataEvento} onChange={e => upd("dataEvento", e.target.value)} style={errors.dataEvento ? { borderColor: G.coral } : {}} />
+          </Field>
+          <Field label="Vagas" error={errors.vagasTotal}>
+            <input className="input" type="number" placeholder="10" min="1" value={form.vagasTotal} onChange={e => upd("vagasTotal", e.target.value)} style={errors.vagasTotal ? { borderColor: G.coral } : {}} />
+          </Field>
         </div>
-        <Field label="Descrição" error={errors.desc}><textarea className="input" placeholder="Descreva a atividade..." value={form.desc} onChange={e => upd("desc", e.target.value)} style={{ minHeight: 110, ...(errors.desc ? { borderColor: G.coral } : {}) }} /></Field>
+
         <div className="divider" />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-          <Field label="Data" error={errors.date}><input className="input" type="text" placeholder="Ex: 20 Mai" value={form.date} onChange={e => upd("date", e.target.value)} style={errors.date ? { borderColor: G.coral } : {}} /></Field>
-          <Field label="Horário" error={errors.time}><input className="input" type="text" placeholder="Ex: 08h–12h" value={form.time} onChange={e => upd("time", e.target.value)} style={errors.time ? { borderColor: G.coral } : {}} /></Field>
-          <Field label="Duração (horas)" error={errors.hours}><input className="input" type="number" placeholder="4" min="1" value={form.hours} onChange={e => upd("hours", e.target.value)} style={errors.hours ? { borderColor: G.coral } : {}} /></Field>
-        </div>
-        <div className="divider" />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16 }}>
-          <Field label="Vagas" error={errors.spots}><input className="input" type="number" placeholder="10" min="1" value={form.spots} onChange={e => upd("spots", e.target.value)} style={errors.spots ? { borderColor: G.coral } : {}} /></Field>
-          <Field label="Habilidades úteis (separadas por vírgula)"><input className="input" type="text" placeholder="Paciência, Comunicação" value={form.skills} onChange={e => upd("skills", e.target.value)} /></Field>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <Field label="Latitude" error={errors.localLat}>
+            <input className="input" type="number" step="0.0000001" placeholder="-23.5505" value={form.localLat} onChange={e => upd("localLat", e.target.value)} style={errors.localLat ? { borderColor: G.coral } : {}} />
+          </Field>
+          <Field label="Longitude" error={errors.localLong}>
+            <input className="input" type="number" step="0.0000001" placeholder="-46.6333" value={form.localLong} onChange={e => upd("localLong", e.target.value)} style={errors.localLong ? { borderColor: G.coral } : {}} />
+          </Field>
         </div>
       </div>
+
       <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-        <button className="btn-ghost" style={{ flex: 1 }} onClick={() => handleSubmit("draft")}><Icon name="file-text" size={16} color={G.emerald} />Salvar Rascunho</button>
-        <button className="btn-primary" style={{ flex: 2 }} onClick={() => handleSubmit("active")}><Icon name="check" size={16} color={G.navy} />Publicar Oportunidade</button>
+        <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setActiveTab("opportunities")}>Cancelar</button>
+        <button className="btn-primary" style={{ flex: 2 }} onClick={handleSubmit} disabled={enviando}>
+          <Icon name="check" size={16} color={G.navy} />
+          {enviando ? "Publicando…" : "Publicar Oportunidade"}
+        </button>
       </div>
     </div>
   );
@@ -633,67 +745,106 @@ const CreateOpportunityTab = () => {
 // 6. EnrolleesTab
 // ═══════════════════════════════════════════════════════════════════════════════
 const EnrolleesTab = () => {
-  const { enrollees, opportunities } = useOng();
+  const { enrollees, opportunities, carregandoDados } = useOng();
   const [filterOp, setFilterOp] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
+
   const filtered = enrollees.filter(e => {
-    const matchOp = filterOp === "all" || e.opportunityId === Number(filterOp);
-    const matchStatus = filterStatus === "all" || e.status === filterStatus;
-    const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase());
+    const matchOp = filterOp === "all" || e.idOportunidade === Number(filterOp);
+    const statusName = e.statusInscricao?.name || e.statusInscricao;
+    const matchStatus = filterStatus === "all" || statusName === filterStatus;
+    const matchSearch = !search || String(e.idUsuario).includes(search);
     return matchOp && matchStatus && matchSearch;
   });
-  const statusBadge = { confirmed: "badge-green", pending: "badge-amber", cancelled: "badge-coral" };
-  const statusLabel = { confirmed: "Confirmado", pending: "Pendente", cancelled: "Cancelado" };
-  const getOpTitle = (id) => opportunities.find(o => o.id === id)?.title || "—";
+
+  const statusBadge = (status) => {
+    const s = status?.name || status;
+    if (s === "Inscrito") return "badge-amber";
+    if (s === "Realizado") return "badge-green";
+    if (s === "Cancelado") return "badge-coral";
+    return "badge-slate";
+  };
+
+  const getOpTitle = (id) => opportunities.find(o => o.id === id)?.titulo || `Oportunidade #${id}`;
+
+  const stats = {
+    total: enrollees.length,
+    inscrito: enrollees.filter(e => (e.statusInscricao?.name || e.statusInscricao) === "Inscrito").length,
+    realizado: enrollees.filter(e => (e.statusInscricao?.name || e.statusInscricao) === "Realizado").length,
+    cancelado: enrollees.filter(e => (e.statusInscricao?.name || e.statusInscricao) === "Cancelado").length,
+  };
+
+  if (carregandoDados) {
+    return <div className="empty-state"><p>Carregando inscritos…</p></div>;
+  }
 
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 24 }}>
         <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Inscritos</h2>
-        <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Gerencie os voluntários inscritos nas suas oportunidades.</p>
+        <p style={{ color: G.slate, fontSize: 13, marginTop: 4 }}>Voluntários inscritos nas oportunidades da sua ONG.</p>
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-        {[[enrollees.length, "Total", G.white], [enrollees.filter(e => e.status === "confirmed").length, "Confirmados", G.emerald], [enrollees.filter(e => e.status === "pending").length, "Pendentes", G.amber], [enrollees.filter(e => e.checkedIn).length, "Check-ins", G.purple]].map(([v, l, c]) => (
+        {[[stats.total, "Total", G.white], [stats.inscrito, "Inscritos", G.amber], [stats.realizado, "Realizados", G.emerald], [stats.cancelado, "Cancelados", G.coral]].map(([v, l, c]) => (
           <div key={String(l)} className="stat-card" style={{ padding: "14px 16px" }}>
             <div className="syne" style={{ fontSize: 22, fontWeight: 800, color: c }}>{v}</div>
             <div style={{ fontSize: 11, color: G.slate, marginTop: 4 }}>{l}</div>
           </div>
         ))}
       </div>
+
       <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative", flex: "1 1 200px" }}>
-          <input className="input" type="text" placeholder="Buscar por nome ou e-mail..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 36, height: 40, fontSize: 13 }} />
-          <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><Icon name="search" size={15} color={G.slate} /></div>
+          <input className="input" type="text" placeholder="Buscar por ID do usuário…" value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 36, height: 40, fontSize: 13 }} />
+          <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+            <Icon name="search" size={15} color={G.slate} />
+          </div>
         </div>
         <select className="input" value={filterOp} onChange={e => setFilterOp(e.target.value)} style={{ flex: "0 0 auto", width: "auto", minWidth: 180, height: 40, fontSize: 13, color: G.white }}>
           <option value="all">Todas as oportunidades</option>
-          {opportunities.map(o => <option key={o.id} value={o.id}>{o.title}</option>)}
+          {opportunities.map(o => <option key={o.id} value={o.id}>{o.titulo}</option>)}
         </select>
         <select className="input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: "0 0 auto", width: "auto", minWidth: 140, height: 40, fontSize: 13, color: G.white }}>
           <option value="all">Todos os status</option>
-          <option value="confirmed">Confirmados</option>
-          <option value="pending">Pendentes</option>
-          <option value="cancelled">Cancelados</option>
+          <option value="Inscrito">Inscritos</option>
+          <option value="Realizado">Realizados</option>
+          <option value="Expirado">Expirados</option>
+          <option value="Cancelado">Cancelados</option>
         </select>
       </div>
+
       {filtered.length === 0 ? (
-        <div className="empty-state"><div style={{ fontSize: 40, marginBottom: 12 }}>👥</div><p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhum inscrito encontrado</p><p style={{ fontSize: 13 }}>Tente ajustar os filtros.</p></div>
+        <div className="empty-state">
+          <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+          <p style={{ fontSize: 15, fontWeight: 600, color: G.white, marginBottom: 8 }}>Nenhum inscrito encontrado</p>
+          <p style={{ fontSize: 13 }}>{enrollees.length === 0 ? "Quando voluntários se inscreverem, aparecerão aqui." : "Tente ajustar os filtros."}</p>
+        </div>
       ) : (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Voluntário</th><th>Oportunidade</th><th>Cidade</th><th>Inscrito em</th><th>Status</th><th>Check-in</th></tr></thead>
+            <thead><tr><th>Voluntário (ID)</th><th>Oportunidade</th><th>Pontos snap</th><th>Status</th></tr></thead>
             <tbody>
-              {filtered.map(e => (
-                <tr key={e.id}>
-                  <td><div style={{ display: "flex", alignItems: "center", gap: 10 }}><div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>{e.name[0]}</div><div><div style={{ fontSize: 13, fontWeight: 600 }}>{e.name}</div><div style={{ fontSize: 11, color: G.slate }}>{e.email}</div></div></div></td>
-                  <td><span style={{ fontSize: 13, color: G.slate }}>{getOpTitle(e.opportunityId)}</span></td>
-                  <td><span style={{ fontSize: 13, color: G.slate }}>{e.city}</span></td>
-                  <td><span style={{ fontSize: 13, color: G.slate }}>{e.enrolledAt}</span></td>
-                  <td><span className={`badge ${statusBadge[e.status]}`}>{statusLabel[e.status]}</span></td>
-                  <td>{e.checkedIn ? <div style={{ display: "flex", alignItems: "center", gap: 5 }}><Icon name="check-circle" size={14} color={G.emerald} /><span style={{ fontSize: 12, color: G.emerald }}>Presente</span></div> : <span style={{ fontSize: 12, color: G.slate }}>—</span>}</td>
-                </tr>
-              ))}
+              {filtered.map(e => {
+                const statusName = e.statusInscricao?.name || e.statusInscricao;
+                const pts = Math.round(Number(e.pontuacaoSnap) * Number(e.modificadorSnap)) || 0;
+                return (
+                  <tr key={e.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${G.emerald}40, ${G.purple}40)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: G.emerald }}>
+                          #{e.idUsuario}
+                        </div>
+                        <span style={{ fontSize: 13, color: G.slate }}>Usuário #{e.idUsuario}</span>
+                      </div>
+                    </td>
+                    <td><span style={{ fontSize: 13, color: G.slate }}>{getOpTitle(e.idOportunidade)}</span></td>
+                    <td><span style={{ fontSize: 13, color: G.emerald, fontWeight: 600 }}>{pts}</span></td>
+                    <td><span className={`badge ${statusBadge(e.statusInscricao)}`}>{statusName}</span></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -786,7 +937,8 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   // logout chama o backend antes de mudar de tela
   const handleLogout = async () => {
     await logout();
-    setScreen("login");
+    // Redireciona para o portal voluntário (onde está o login principal e o toggle entre portais)
+    window.location.href = "/";
   };
 
   return (
