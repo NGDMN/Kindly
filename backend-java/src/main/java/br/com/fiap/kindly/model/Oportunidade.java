@@ -9,6 +9,7 @@ public class Oportunidade {
     private String titulo;
     private String descricao;
     private Date dataEvento;
+    private String endereco;
     private BigDecimal localLat;
     private BigDecimal localLong;
     private Integer vagasTotal;
@@ -21,11 +22,12 @@ public class Oportunidade {
     public Oportunidade() {
     }
 
-    public Oportunidade(Long id, String titulo, String descricao, Date dataEvento, BigDecimal localLat, BigDecimal localLong, Integer vagasTotal, Integer vagasPresente, Integer vagasNoShow, Long idOng, Long idCategoria, Status status) {
+    public Oportunidade(Long id, String titulo, String descricao, Date dataEvento, String endereco, BigDecimal localLat, BigDecimal localLong, Integer vagasTotal, Integer vagasPresente, Integer vagasNoShow, Long idOng, Long idCategoria, Status status) {
         this.id = id;
         this.titulo = titulo;
         this.descricao = descricao;
         this.dataEvento = dataEvento;
+        this.endereco = endereco;
         this.localLat = localLat;
         this.localLong = localLong;
         this.vagasTotal = vagasTotal;
@@ -68,8 +70,12 @@ public class Oportunidade {
         this.dataEvento = dataEvento;
     }
 
-    public Status getStatus() {
-        return status;
+    public String getEndereco(){
+        return endereco;
+    }
+
+    public void setEndereco(String endereco){
+        this.endereco = endereco;
     }
 
     public BigDecimal getLocalLat() {
@@ -126,6 +132,10 @@ public class Oportunidade {
 
     public void setIdCategoria(Long idCategoria) {
         this.idCategoria = idCategoria;
+    }
+
+    public Status getStatus() {
+        return status;
     }
 
     public void setStatus(Status status) {

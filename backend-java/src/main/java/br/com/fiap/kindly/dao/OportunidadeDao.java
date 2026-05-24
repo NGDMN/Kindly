@@ -26,6 +26,7 @@ public class OportunidadeDao {
             rs.getString("titulo"),
             rs.getString("descricao"),
             rs.getDate("data_evento"),
+            rs.getString("endereco"),
             rs.getBigDecimal("local_lat"),
             rs.getBigDecimal("local_long"),
             rs.getInt("vagas_total"),
@@ -39,13 +40,14 @@ public class OportunidadeDao {
     public void inserir(Oportunidade o) {
         String sql = """
                 INSERT INTO TB_Oportunidade
-                    (titulo, descricao, data_evento, local_lat, local_long, vagas_total, vagas_presente, vagas_noshow, id_ong, id_categoria, id_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (titulo, descricao, data_evento, endereco, local_lat, local_long, vagas_total, vagas_presente, vagas_noshow, id_ong, id_categoria, id_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         jdbc.update(sql,
                 o.getTitulo(),
                 o.getDescricao(),
                 o.getDataEvento(),
+                o.getEndereco(),
                 o.getLocalLat(),
                 o.getLocalLong(),
                 o.getVagasTotal(),
@@ -80,7 +82,7 @@ public class OportunidadeDao {
     public void atualizar(Oportunidade o) {
         String sql = """
                 UPDATE TB_Oportunidade
-                SET titulo = ?, descricao = ?, data_evento = ?, local_lat = ?, local_long = ?,
+                SET titulo = ?, descricao = ?, data_evento = ?, endereco = ?, local_lat = ?, local_long = ?,
                     vagas_total = ?, vagas_presente = ?, vagas_noshow = ?, id_ong = ?, id_categoria = ?, id_status = ?
                 WHERE id = ?
                 """;
@@ -88,6 +90,7 @@ public class OportunidadeDao {
                 o.getTitulo(),
                 o.getDescricao(),
                 o.getDataEvento(),
+                o.getEndereco(),
                 o.getLocalLat(),
                 o.getLocalLong(),
                 o.getVagasTotal(),

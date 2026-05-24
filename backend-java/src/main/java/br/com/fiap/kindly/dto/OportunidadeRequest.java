@@ -8,6 +8,7 @@ public class OportunidadeRequest {
     private String titulo;
     private String descricao;
     private Date dataEvento;
+    private String endereco;
     private BigDecimal localLat;
     private BigDecimal localLong;
     private Integer vagasTotal;
@@ -43,6 +44,14 @@ public class OportunidadeRequest {
 
     public BigDecimal getLocalLat() {
         return localLat;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
+
+    public void setEndereco(String endereco) {
+        this.endereco = endereco;
     }
 
     public void setLocalLat(BigDecimal localLat) {

@@ -123,6 +123,7 @@ CREATE TABLE TB_Oportunidade(
     titulo VARCHAR2(100) NOT NULL,
     descricao VARCHAR2(200) NOT NULL,
     data_evento DATE NOT NULL,
+    endereco VARCHAR2(255) NOT NULL,
     local_lat NUMBER(10,7) NOT NULL,
     local_long NUMBER(10,7) NOT NULL,
     vagas_total NUMBER NOT NULL,

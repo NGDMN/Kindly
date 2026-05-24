@@ -41,11 +41,11 @@ public class OportunidadeService {
         this.usuarioOngDao = usuarioOngDao;
     }
 
-    public void cadastrar(String titulo, String descricao, Date dataEvento,
+    public void cadastrar(String titulo, String descricao, Date dataEvento, String endereco,
             BigDecimal localLat, BigDecimal localLong,
             Integer vagasTotal, Long idOng, Long idCategoria) {
 
-        validarCadastro(titulo, descricao, dataEvento, localLat, localLong, vagasTotal);
+        validarCadastro(titulo, descricao, dataEvento, endereco, localLat, localLong, vagasTotal);
 
         ongDao.buscarPorId(idOng)
                 .orElseThrow(() -> new IllegalArgumentException("ONG não encontrada."));
@@ -57,6 +57,7 @@ public class OportunidadeService {
                 titulo,
                 descricao,
                 dataEvento,
+                endereco,
                 localLat,
                 localLong,
                 vagasTotal,
@@ -75,6 +76,7 @@ public class OportunidadeService {
                 req.getTitulo(),
                 req.getDescricao(),
                 req.getDataEvento(),
+                req.getEndereco(),
                 req.getLocalLat(),
                 req.getLocalLong(),
                 req.getVagasTotal(),
@@ -100,12 +102,12 @@ public class OportunidadeService {
                 .orElseThrow(() -> new IllegalArgumentException("Oportunidade não encontrada."));
     }
 
-    public void atualizar(Long id, String titulo, String descricao, Date dataEvento,
+    public void atualizar(Long id, String titulo, String descricao, Date dataEvento, String endereco,
             BigDecimal localLat, BigDecimal localLong,
             Integer vagasTotal, Long idCategoria) {
 
         Oportunidade existente = buscarPorId(id);
-        validarCadastro(titulo, descricao, dataEvento, localLat, localLong, vagasTotal);
+        validarCadastro(titulo, descricao, dataEvento, endereco, localLat, localLong, vagasTotal);
 
         categoriaDao.buscarPorId(idCategoria)
                 .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada."));
@@ -113,6 +115,7 @@ public class OportunidadeService {
         existente.setTitulo(titulo);
         existente.setDescricao(descricao);
         existente.setDataEvento(dataEvento);
+        existente.setEndereco(endereco);
         existente.setLocalLat(localLat);
         existente.setLocalLong(localLong);
         existente.setVagasTotal(vagasTotal);
@@ -129,6 +132,7 @@ public class OportunidadeService {
                 req.getTitulo(),
                 req.getDescricao(),
                 req.getDataEvento(),
+                req.getEndereco(),
                 req.getLocalLat(),
                 req.getLocalLong(),
                 req.getVagasTotal(),
@@ -141,7 +145,7 @@ public class OportunidadeService {
         oportunidadeDao.deletar(id);
     }
 
-    private void validarCadastro(String titulo, String descricao, Date dataEvento,
+    private void validarCadastro(String titulo, String descricao, Date dataEvento, String endereco,
             BigDecimal localLat, BigDecimal localLong, Integer vagasTotal) {
         if (titulo == null || titulo.isBlank()) {
             throw new IllegalArgumentException("Título é obrigatório.");
@@ -151,6 +155,9 @@ public class OportunidadeService {
         }
         if (dataEvento == null) {
             throw new IllegalArgumentException("Data do evento é obrigatória.");
+        }
+        if (endereco == null || endereco.isBlank()) {
+            throw new IllegalArgumentException("Endereço é obrigatório.");
         }
         if (localLat == null || localLong == null) {
             throw new IllegalArgumentException("Localização é obrigatória.");
@@ -182,6 +189,7 @@ public class OportunidadeService {
                 op.getTitulo(),
                 op.getDescricao(),
                 op.getDataEvento(),
+                op.getEndereco(),
                 op.getLocalLat(),
                 op.getLocalLong(),
                 op.getVagasTotal(),

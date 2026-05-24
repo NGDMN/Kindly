@@ -9,6 +9,7 @@ public class OportunidadeResponseDTO {
     private String titulo;
     private String descricao;
     private Date dataEvento;
+    private String endereco;
     private BigDecimal localLat;
     private BigDecimal localLong;
     private Integer vagasTotal;
@@ -23,7 +24,7 @@ public class OportunidadeResponseDTO {
     public OportunidadeResponseDTO() {
     }
 
-    public OportunidadeResponseDTO(Long id, String titulo, String descricao, Date dataEvento,
+    public OportunidadeResponseDTO(Long id, String titulo, String descricao, Date dataEvento, String endereco,
             BigDecimal localLat, BigDecimal localLong,
             Integer vagasTotal, Integer vagasPresente,
             Long idOng, String nomeOng,
@@ -33,6 +34,7 @@ public class OportunidadeResponseDTO {
         this.titulo = titulo;
         this.descricao = descricao;
         this.dataEvento = dataEvento;
+        this.endereco = endereco;
         this.localLat = localLat;
         this.localLong = localLong;
         this.vagasTotal = vagasTotal;
@@ -76,6 +78,14 @@ public class OportunidadeResponseDTO {
 
     public void setDataEvento(Date dataEvento) {
         this.dataEvento = dataEvento;
+    }
+
+    public String getEndereco() {
+        return endereco;
+    }
+
+    public void setEndereco(String endereco) {
+        this.endereco = endereco;
     }
 
     public BigDecimal getLocalLat() {
