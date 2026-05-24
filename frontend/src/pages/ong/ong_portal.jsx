@@ -320,11 +320,7 @@ const LoginScreen = () => {
             {carregando ? "Entrando…" : "Acessar Portal"}
           </button>
 
-          <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: G.slate }}>
-            Ainda não tem cadastro?{" "}
-            <span style={{ color: G.emerald, cursor: "pointer", fontWeight: 600 }} onClick={() => setScreen("register")}>Cadastrar ONG</span>
-          </div>
-        </div>
+          
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 24 }}>
           {[["580", "ONGs cadastradas"], ["12.4k", "Voluntários ativos"], ["84k h", "Horas doadas"]].map(([n, l]) => (
