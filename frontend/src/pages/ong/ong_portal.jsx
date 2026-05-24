@@ -1,15 +1,6 @@
 import { useState, useEffect, createContext, useContext } from "react";
-import {
-  login,
-  registrar,
-  logout,
-  listarOportunidades,
-  listarCategorias,
-  listarMinhasOngs,
-  listarInscricoesDaOportunidade,
-  criarOportunidade,
-  atualizarOportunidade,
-} from "../../services/api";
+import { login, registrar, logout, listarOportunidades, listarCategorias, listarMinhasOngs, listarInscricoesDaOportunidade, criarOportunidade, atualizarOportunidade, atualizarOng, } from "../../services/api";
+import { salvarOngAtiva, getOngAtiva, limparOngAtiva } from "../../services/auth";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DESIGN SYSTEM
@@ -165,8 +156,8 @@ const OngContext = createContext(null);
 
 function OngProvider({ children }) {
   const [screen, setScreen] = useState("login");
-  const [ong, setOng] = useState(MOCK_ONG); // mock mantido para dashboard/profile conforme escopo definido
-  const [minhasOngs, setMinhasOngs] = useState([]); // IDs reais das ONGs do usuário, vindo do /ongs/minhas
+  const [ongAtiva, setOngAtivaState] = useState(() => getOngAtiva());
+  const [minhasOngs, setMinhasOngs] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [enrollees, setEnrollees] = useState([]);
   const [carregandoDados, setCarregandoDados] = useState(false);
@@ -175,20 +166,23 @@ function OngProvider({ children }) {
 
   const showToast = (msg, icon = "✅") => { setToast({ msg, icon }); setTimeout(() => setToast(null), 3200); };
 
-  // Carrega todas as oportunidades das ONGs do usuário + todos os inscritos dessas oportunidades
+  const selecionarOng = (ong) => {
+    salvarOngAtiva(ong);
+    setOngAtivaState(ong);
+    setScreen("portal");
+  };
+
   const recarregarDados = async () => {
+    if (!ongAtiva) return;
     setCarregandoDados(true);
     try {
       const ongs = await listarMinhasOngs();
       setMinhasOngs(ongs);
-      const idsOngs = new Set(ongs.map(o => o.id));
 
-      // /oportunidades retorna todas as ativas; filtramos no front pelas ONGs vinculadas
       const todasOps = await listarOportunidades();
-      const minhasOps = todasOps.filter(op => idsOngs.has(op.idOng));
+      const minhasOps = todasOps.filter(op => op.idOng === ongAtiva.id);
       setOpportunities(minhasOps);
 
-      // Para cada oportunidade, busca os inscritos em paralelo
       const inscPorOp = await Promise.all(
         minhasOps.map(op =>
           listarInscricoesDaOportunidade(op.id)
@@ -205,7 +199,6 @@ function OngProvider({ children }) {
     setCarregandoDados(false);
   };
 
-  // Carrega dados quando entra no portal
   useEffect(() => {
     if (screen === "portal") {
       recarregarDados();
@@ -215,8 +208,8 @@ function OngProvider({ children }) {
   return (
     <OngContext.Provider value={{
       screen, setScreen,
-      ong, setOng,
-      minhasOngs,
+      ongAtiva, selecionarOng,
+      minhasOngs, setMinhasOngs,
       opportunities,
       enrollees,
       carregandoDados,
@@ -254,7 +247,7 @@ const Blobs = () => (
 // 1. LoginScreen
 // ═══════════════════════════════════════════════════════════════════════════════
 const LoginScreen = () => {
-  const { setScreen } = useOng();
+  const { setScreen, selecionarOng, setMinhasOngs } = useOng();
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -267,7 +260,18 @@ const LoginScreen = () => {
     setErro("");
     try {
       await login({ usuario, senha });
-      setScreen("portal");
+      const ongs = await listarMinhasOngs();
+      if (ongs.length === 0) {
+        setErro("Seu usuário não está vinculado a nenhuma ONG.");
+        setCarregando(false);
+        return;
+      }
+      if (ongs.length === 1) {
+        selecionarOng(ongs[0]);
+      } else {
+        setMinhasOngs(ongs);
+        setScreen("selector");
+      }
     } catch {
       setErro("Usuário ou senha inválidos.");
     } finally {
@@ -418,6 +422,46 @@ const RegisterScreen = () => {
             {step < 2 ? "Continuar" : carregando ? "Cadastrando…" : "Cadastrar ONG"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2.5. OngSelectorScreen
+// ═══════════════════════════════════════════════════════════════════════════════
+const OngSelectorScreen = ({ onVoltar }) => {
+  const { minhasOngs, selecionarOng } = useOng();
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 24, position: "relative", overflow: "hidden" }}>
+      <Blobs />
+      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 420 }} className="fade-up">
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: `0 8px 32px rgba(0,200,150,.35)` }}>
+            <span style={{ fontSize: 28 }}>🤝</span>
+          </div>
+          <h2 className="syne" style={{ fontSize: 22, fontWeight: 800 }}>Qual ONG você quer gerenciar?</h2>
+          <p style={{ color: G.slate, fontSize: 14, marginTop: 6 }}>Você está vinculado a mais de uma organização.</p>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {minhasOngs.map(o => (
+            <button key={o.id} onClick={() => selecionarOng(o)} style={{ background: G.navyMid, border: `1.5px solid rgba(0,200,150,.18)`, borderRadius: 14, padding: "18px 20px", cursor: "pointer", textAlign: "left", transition: "border-color .2s, transform .15s", color: G.white, fontFamily: "'DM Sans', sans-serif" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = G.emerald; e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0,200,150,.18)"; e.currentTarget.style.transform = "none"; }}>
+              <div className="syne" style={{ fontSize: 16, fontWeight: 700 }}>{o.nomeFantasia}</div>
+              <div style={{ fontSize: 12, color: G.slate, marginTop: 4 }}>{o.razaoSocial}</div>
+              <div style={{ fontSize: 11, marginTop: 6 }}>
+                <span className="badge badge-green">{o.role}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onVoltar} style={{ background: "none", border: "none", color: G.slate, cursor: "pointer", marginTop: 24, fontSize: 13, width: "100%", textAlign: "center" }}>
+          ← Voltar ao login
+        </button>
       </div>
     </div>
   );
@@ -611,7 +655,7 @@ const Field = ({ label, error, children }) => (
   </div>
 );
 const CreateOpportunityTab = () => {
-  const { minhasOngs, setActiveTab, showToast, recarregarDados } = useOng();
+  const { ongAtiva, setActiveTab, showToast, recarregarDados } = useOng();
   const [categorias, setCategorias] = useState([]);
   const [form, setForm] = useState({
     titulo: "",
@@ -631,10 +675,10 @@ const CreateOpportunityTab = () => {
   }, []);
 
   useEffect(() => {
-    if (minhasOngs.length === 1 && !form.idOng) {
-      setForm(f => ({ ...f, idOng: String(minhasOngs[0].id) }));
+    if (ongAtiva && !form.idOng) {
+      setForm(f => ({ ...f, idOng: String(ongAtiva.id) }));
     }
-  }, [minhasOngs]);
+  }, [ongAtiva]);
 
   const upd = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })); };
 
@@ -646,7 +690,6 @@ const CreateOpportunityTab = () => {
     if (!form.localLat || isNaN(Number(form.localLat))) e.localLat = "Inválido";
     if (!form.localLong || isNaN(Number(form.localLong))) e.localLong = "Inválido";
     if (!form.vagasTotal || isNaN(Number(form.vagasTotal)) || Number(form.vagasTotal) <= 0) e.vagasTotal = "Inválido";
-    if (!form.idOng) e.idOng = "Selecione a ONG";
     if (!form.idCategoria) e.idCategoria = "Selecione a categoria";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -689,12 +732,12 @@ const CreateOpportunityTab = () => {
           <input className="input" type="text" placeholder="Ex: Tutoria em Matemática" value={form.titulo} onChange={e => upd("titulo", e.target.value)} style={errors.titulo ? { borderColor: G.coral } : {}} />
         </Field>
 
-        <Field label="ONG responsável" error={errors.idOng}>
-          <select className="input" value={form.idOng} onChange={e => upd("idOng", e.target.value)} style={errors.idOng ? { borderColor: G.coral } : {}}>
-            <option value="">Selecione</option>
-            {minhasOngs.map(o => <option key={o.id} value={o.id}>{o.nomeFantasia}</option>)}
-          </select>
-        </Field>
+        <div className="form-group">
+          <label className="label">ONG responsável</label>
+          <div style={{ fontSize: 14, color: G.white, padding: "12px 16px", background: "rgba(255,255,255,.04)", borderRadius: 10, border: "1.5px solid rgba(255,255,255,.06)" }}>
+            {ongAtiva?.nomeFantasia || "—"}
+          </div>
+        </div>
 
         <Field label="Categoria" error={errors.idCategoria}>
           <select className="input" value={form.idCategoria} onChange={e => upd("idCategoria", e.target.value)} style={errors.idCategoria ? { borderColor: G.coral } : {}}>
@@ -924,7 +967,7 @@ const ProfileTab = () => {
 // SIDEBAR + TOPNAV + PORTAL SHELL
 // ═══════════════════════════════════════════════════════════════════════════════
 const Sidebar = ({ mobileOpen, onClose }) => {
-  const { activeTab, setActiveTab, ong, setScreen } = useOng();
+  const { activeTab, setActiveTab, ongAtiva, setScreen } = useOng();
   const NAV_ITEMS = [
     { id: "dashboard", icon: "bar-chart", label: "Dashboard" },
     { id: "opportunities", icon: "calendar", label: "Oportunidades" },
@@ -938,6 +981,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   const handleLogout = async () => {
     await logout();
     // Redireciona para o portal voluntário (onde está o login principal e o toggle entre portais)
+    limparOngAtiva();
     window.location.href = "/";
   };
 
@@ -947,8 +991,8 @@ const Sidebar = ({ mobileOpen, onClose }) => {
       <aside className={`sidebar${mobileOpen ? " mobile-open" : ""}`}>
         <div style={{ padding: "0 20px 20px", borderBottom: "1px solid rgba(255,255,255,.06)", marginBottom: 8 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${G.emerald}, ${G.emeraldDark})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10 }}>🤝</div>
-          <div className="syne" style={{ fontSize: 13, fontWeight: 700 }}>{ong.name}</div>
-          <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>{ong.category}</div>
+          <div className="syne" style={{ fontSize: 13, fontWeight: 700 }}>{ongAtiva?.nomeFantasia || "—"}</div>
+          <div style={{ fontSize: 11, color: G.slate, marginTop: 2 }}>{ongAtiva?.razaoSocial || ""}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: G.emerald }} />
             <span style={{ fontSize: 11, color: G.emerald }}>Ativa</span>
@@ -1035,6 +1079,7 @@ function AppContent() {
       <div className="noise">
         {screen === "login" && <LoginScreen />}
         {screen === "register" && <RegisterScreen />}
+        {screen === "selector" && <OngSelectorScreen onVoltar={() => setScreen("login")} />}
         {screen === "portal" && <PortalShell />}
         {toast && <Toast msg={toast.msg} icon={toast.icon} onDone={() => showToast("", "")} />}
       </div>
