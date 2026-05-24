@@ -1,4 +1,15 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useRef } from "react";
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix do ícone padrão do Leaflet que quebra com bundlers
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 import { login, registrar, logout, listarOportunidades, listarCategorias, listarMinhasOngs, listarInscricoesDaOportunidade, criarOportunidade, atualizarOportunidade, atualizarOng, } from "../../services/api";
 import { salvarOngAtiva, getOngAtiva, limparOngAtiva } from "../../services/auth";
 
@@ -647,6 +658,16 @@ const OpportunitiesTab = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. CreateOpportunityTab
 // ═══════════════════════════════════════════════════════════════════════════════
+// Captura cliques no mapa e move o marker
+function MarkerMovivel({ posicao, onChange }) {
+  useMapEvents({
+    click(e) {
+      onChange(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return posicao ? <Marker position={posicao} /> : null;
+}
+
 const Field = ({ label, error, children }) => (
   <div className="form-group">
     <label className="label">{label}</label>
@@ -661,12 +682,15 @@ const CreateOpportunityTab = () => {
     titulo: "",
     descricao: "",
     dataEvento: "",
+    endereco: "",
     localLat: "",
     localLong: "",
     vagasTotal: "",
     idOng: "",
     idCategoria: "",
   });
+  const [markerPos, setMarkerPos] = useState(null);
+  const [geocodificando, setGeocodificando] = useState(false);
   const [errors, setErrors] = useState({});
   const [enviando, setEnviando] = useState(false);
 
@@ -682,13 +706,43 @@ const CreateOpportunityTab = () => {
 
   const upd = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })); };
 
+  const geocodificar = async () => {
+    if (!form.endereco.trim()) return;
+    setGeocodificando(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.endereco)}&limit=1`,
+        { headers: { "Accept-Language": "pt-BR" } }
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        setMarkerPos([lat, lon]);
+        setForm(f => ({ ...f, localLat: String(lat), localLong: String(lon) }));
+        setErrors(e => ({ ...e, endereco: "", localLat: "", localLong: "" }));
+      } else {
+        setErrors(e => ({ ...e, endereco: "Endereço não encontrado. Tente ser mais específico." }));
+      }
+    } catch {
+      setErrors(e => ({ ...e, endereco: "Erro ao buscar endereço." }));
+    }
+    setGeocodificando(false);
+  };
+
+  const onMapClick = (lat, lng) => {
+    setMarkerPos([lat, lng]);
+    setForm(f => ({ ...f, localLat: String(lat), localLong: String(lng) }));
+    setErrors(e => ({ ...e, localLat: "", localLong: "" }));
+  };
+
   const validate = () => {
     const e = {};
     if (!form.titulo.trim()) e.titulo = "Obrigatório";
     if (!form.descricao.trim()) e.descricao = "Obrigatório";
     if (!form.dataEvento) e.dataEvento = "Obrigatório";
-    if (!form.localLat || isNaN(Number(form.localLat))) e.localLat = "Inválido";
-    if (!form.localLong || isNaN(Number(form.localLong))) e.localLong = "Inválido";
+    if (!form.endereco.trim()) e.endereco = "Obrigatório";
+    if (!form.localLat || !form.localLong) e.endereco = "Confirme o endereço no mapa.";
     if (!form.vagasTotal || isNaN(Number(form.vagasTotal)) || Number(form.vagasTotal) <= 0) e.vagasTotal = "Inválido";
     if (!form.idCategoria) e.idCategoria = "Selecione a categoria";
     setErrors(e);
@@ -703,6 +757,7 @@ const CreateOpportunityTab = () => {
         titulo: form.titulo,
         descricao: form.descricao,
         dataEvento: form.dataEvento,
+        endereco: form.endereco,
         localLat: Number(form.localLat),
         localLong: Number(form.localLong),
         vagasTotal: Number(form.vagasTotal),
@@ -719,7 +774,8 @@ const CreateOpportunityTab = () => {
     setEnviando(false);
   };
 
-
+  // Centro padrão: São Paulo
+  const centroInicial = markerPos || [-23.5505, -46.6333];
 
   return (
     <div className="fade-up" style={{ maxWidth: 640 }}>
@@ -763,14 +819,49 @@ const CreateOpportunityTab = () => {
 
         <div className="divider" />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <Field label="Latitude" error={errors.localLat}>
-            <input className="input" type="number" step="0.0000001" placeholder="-23.5505" value={form.localLat} onChange={e => upd("localLat", e.target.value)} style={errors.localLat ? { borderColor: G.coral } : {}} />
-          </Field>
-          <Field label="Longitude" error={errors.localLong}>
-            <input className="input" type="number" step="0.0000001" placeholder="-46.6333" value={form.localLong} onChange={e => upd("localLong", e.target.value)} style={errors.localLong ? { borderColor: G.coral } : {}} />
-          </Field>
+        <Field label="Endereço" error={errors.endereco}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              className="input"
+              type="text"
+              placeholder="Ex: Av. Paulista, 1578, São Paulo"
+              value={form.endereco}
+              onChange={e => upd("endereco", e.target.value)}
+              onKeyDown={e => e.key === "Enter" && geocodificar()}
+              style={errors.endereco ? { borderColor: G.coral } : {}}
+            />
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ flexShrink: 0, padding: "0 16px", fontSize: 13 }}
+              onClick={geocodificar}
+              disabled={geocodificando}
+            >
+              {geocodificando ? "…" : "Buscar"}
+            </button>
+          </div>
+          {form.localLat && form.localLong && (
+            <div style={{ fontSize: 11, color: G.emerald, marginTop: 6 }}>
+              📍 {Number(form.localLat).toFixed(5)}, {Number(form.localLong).toFixed(5)} — ou clique no mapa para ajustar
+            </div>
+          )}
+        </Field>
+
+        <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid rgba(0,200,150,.15)", marginTop: 4 }}>
+          <MapContainer
+            center={centroInicial}
+            zoom={markerPos ? 15 : 12}
+            style={{ height: 260, width: "100%" }}
+            key={markerPos ? markerPos.join(",") : "default"}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+            <MarkerMovivel posicao={markerPos} onChange={onMapClick} />
+          </MapContainer>
         </div>
+        <p style={{ fontSize: 11, color: G.slate, marginTop: 6 }}>Clique no mapa para ajustar a localização manualmente.</p>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
