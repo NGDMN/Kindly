@@ -320,7 +320,8 @@ const LoginScreen = () => {
             {carregando ? "Entrando…" : "Acessar Portal"}
           </button>
 
-          
+
+        </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 24 }}>
           {[["580", "ONGs cadastradas"], ["12.4k", "Voluntários ativos"], ["84k h", "Horas doadas"]].map(([n, l]) => (
